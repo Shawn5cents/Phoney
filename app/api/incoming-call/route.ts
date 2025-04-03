@@ -4,6 +4,7 @@ import { pusherServer } from '@/lib/pusher';
 
 const { VoiceResponse } = twilio.twiml;
 
+// Last updated: 2025-04-03 14:27
 export async function POST(request: Request) {
   try {
     console.log('Incoming call received');
@@ -32,7 +33,12 @@ export async function POST(request: Request) {
     console.log('TwiML Response:', response);
 
     return new NextResponse(response, {
-      headers: { 'Content-Type': 'application/xml' },
+      headers: { 
+        'Content-Type': 'application/xml',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
     });
   } catch (error) {
     console.error('Error handling incoming call:', error);
