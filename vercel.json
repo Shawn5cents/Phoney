@@ -5,6 +5,10 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["iad1"],
+  "github": {
+    "silent": false,
+    "autoAlias": true
+  },
   "env": {
     "OPENAI_API_KEY": "@openai-api-key",
     "TWILIO_ACCOUNT_SID": "@twilio-account-sid",
