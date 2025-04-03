@@ -9,25 +9,41 @@ export async function POST(request: Request) {
   const { phoneNumber } = await request.json();
 
   try {
-    // Update the Twilio number to forward to our webhook
-    await client.incomingPhoneNumbers
-      .list({ phoneNumber: process.env.TWILIO_PHONE_NUMBER })
-      .then(numbers => {
-        return Promise.all(
-          numbers.map(number =>
-            client.incomingPhoneNumbers(number.sid)
-              .update({
-                voiceUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/incoming-call`
-              })
-          )
-        );
-      });
+    // Format phone number to E.164 format
+    const formattedPhoneNumber = phoneNumber.startsWith('+1') ? phoneNumber : `+1${phoneNumber}`;
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
+    // Verify environment variables
+    if (!process.env.TWILIO_PHONE_NUMBER) {
+      throw new Error('TWILIO_PHONE_NUMBER is not set');
+    }
+    if (!process.env.NEXT_PUBLIC_BASE_URL) {
+      throw new Error('NEXT_PUBLIC_BASE_URL is not set');
+    }
+
+    // Update the Twilio number to forward to our webhook
+    const numbers = await client.incomingPhoneNumbers.list({
+      phoneNumber: process.env.TWILIO_PHONE_NUMBER
+    });
+
+    if (numbers.length === 0) {
+      throw new Error(`No Twilio numbers found matching ${process.env.TWILIO_PHONE_NUMBER}`);
+    }
+
+    await Promise.all(
+      numbers.map(number =>
+        client.incomingPhoneNumbers(number.sid)
+          .update({
+            voiceUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/incoming-call`,
+            voiceMethod: 'POST'
+          })
+      )
+    );
+
+    return NextResponse.json({ success: true, message: 'AI assistant activated successfully' });
+  } catch (error: any) {
     console.error('Error activating AI assistant:', error);
     return NextResponse.json(
-      { error: 'Failed to activate AI assistant' },
+      { error: error.message || 'Failed to activate AI assistant' },
       { status: 500 }
     );
   }
