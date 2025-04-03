@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import OpenAI from 'openai';
 import { pusherServer } from '@/lib/pusher';
+import { personalities } from '@/lib/ai-personalities';
+import { getCurrentPersonality } from '@/lib/personality-store';
 
 
 const { VoiceResponse } = twilio.twiml;
@@ -28,14 +30,22 @@ export async function POST(request: Request) {
 
     // Get AI response
     console.log('Getting AI response...');
+    // Get current personality
+    const personalityId = getCurrentPersonality();
+    const personality = personalities[personalityId];
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
         {
-          role: 'system',
-          content: 'You are a helpful AI phone assistant. Keep responses concise and natural.',
+          role: 'system' as const,
+          content: personality.systemPrompt
         },
-        { role: 'user', content: speechResult },
+        ...personality.examples.flatMap(ex => [
+          { role: 'user' as const, content: ex.input },
+          { role: 'assistant' as const, content: ex.response }
+        ]),
+        { role: 'user' as const, content: speechResult },
       ],
     });
 
@@ -44,12 +54,18 @@ export async function POST(request: Request) {
     
     // Update transcript
     try {
-      await pusherServer.trigger('calls', 'call-update', {
-        callSid,
-        transcript: [
-          { speaker: 'User', text: speechResult },
-          { speaker: 'AI', text: aiResponse },
-        ],
+      // Send user's speech
+      await pusherServer.trigger(`call-${callSid}`, 'call.transcription', {
+        text: speechResult,
+        sender: 'user',
+        timestamp: new Date().toISOString()
+      });
+
+      // Send AI's response
+      await pusherServer.trigger(`call-${callSid}`, 'call.transcription', {
+        text: aiResponse,
+        sender: 'ai',
+        timestamp: new Date().toISOString()
       });
     } catch (pusherError) {
       console.error('Pusher error:', pusherError);

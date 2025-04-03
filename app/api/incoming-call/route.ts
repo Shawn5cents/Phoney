@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
+import twilio from 'twilio';
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -17,10 +17,11 @@ export async function POST(request: Request) {
 
     // Notify dashboard of new call
     try {
-      await pusherServer.trigger('calls', 'new-call', {
-        callSid,
-        callerNumber,
-        transcript: [],
+      await pusherServer.trigger(`call-${callSid}`, 'call.started', {
+        callId: callSid,
+        caller: callerNumber,
+        status: 'active',
+        timestamp: new Date().toISOString()
       });
       console.log('Dashboard notified of new call');
     } catch (pusherError) {
