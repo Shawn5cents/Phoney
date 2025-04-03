@@ -1,3 +1,5 @@
+'use client';
+
 import {
   CallVisualization,
   TranscriptionPanel,
@@ -5,8 +7,6 @@ import {
   CallControls,
   PersonalitySelector
 } from '@/components';
-
-'use client';
 
 import { useState, useCallback } from 'react';
 
