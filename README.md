@@ -50,6 +50,39 @@
   </table>
 </div>
 
+### 🎭 AI Personalities
+
+Phoney comes with four distinct AI personalities, each designed for different business needs:
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">👔 <b>Professional</b></td>
+      <td align="center">😊 <b>Friendly</b></td>
+      <td align="center">😄 <b>Witty</b></td>
+      <td align="center">🧘 <b>Zen</b></td>
+    </tr>
+    <tr>
+      <td>Business-focused, efficient</td>
+      <td>Warm and approachable</td>
+      <td>Clever with light humor</td>
+      <td>Calm and mindful</td>
+    </tr>
+    <tr>
+      <td><i>Perfect for corporate</i></td>
+      <td><i>Great for customer service</i></td>
+      <td><i>Ideal for casual brands</i></td>
+      <td><i>Suited for wellness</i></td>
+    </tr>
+  </table>
+</div>
+
+#### Real-time Personality Switching
+- Switch personalities instantly from the dashboard
+- Each personality comes with unique voice settings
+- Customized conversation examples for consistent tone
+- Personality-specific prompts for authentic interactions
+
 ## 🚀 Quick Start
 
 ```bash
@@ -113,6 +146,45 @@ npm run dev
 - [API Reference](https://shawn5cents.github.io/Phoney/api-reference)
 - [Architecture Overview](https://shawn5cents.github.io/Phoney/architecture)
 - [Deployment Guide](https://shawn5cents.github.io/Phoney/deployment)
+- [Personality Configuration](https://shawn5cents.github.io/Phoney/personality-config)
+
+### Configuring AI Personalities
+
+```typescript
+// Example personality configuration
+const customPersonality = {
+  name: "Customer Service",
+  description: "Helpful retail assistant",
+  systemPrompt: `You are a retail assistant...",
+  voiceId: "en-US-JennyNeural",
+  traits: ["Helpful", "Patient", "Knowledgeable"],
+  examples: [
+    {
+      input: "Do you have this in blue?",
+      response: "Let me check our inventory for you."
+    }
+  ]
+};
+```
+
+### Environment Variables
+
+```env
+# AI Configuration
+OPENAI_API_KEY=your_openai_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
+
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_PHONE_NUMBER=your_phone_number
+
+# Pusher Configuration (for real-time updates)
+PUSHER_APP_ID=your_app_id
+PUSHER_KEY=your_key
+PUSHER_SECRET=your_secret
+PUSHER_CLUSTER=your_cluster
+```
 
 ## 🤝 Contributing
 
