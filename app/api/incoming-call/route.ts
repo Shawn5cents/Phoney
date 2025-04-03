@@ -14,6 +14,19 @@ export async function POST(request: Request) {
     const callSid = formData.get('CallSid') as string;
 
     console.log('Call from:', callerNumber, 'SID:', callSid);
+
+    // Notify dashboard of new call
+    try {
+      await pusherServer.trigger('calls', 'new-call', {
+        callSid,
+        callerNumber,
+        transcript: [],
+      });
+      console.log('Dashboard notified of new call');
+    } catch (pusherError) {
+      console.error('Failed to notify dashboard:', pusherError);
+      // Continue with the call even if dashboard notification fails
+    }
     
     const twiml = new VoiceResponse();
     
