@@ -1,152 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Pusher from 'pusher-js';
-
-interface Call {
-  callSid: string;
-  callerNumber: string;
-  transcript: Array<{
-    speaker: 'User' | 'AI';
-    text: string;
-  }>;
-}
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const [activeCalls, setActiveCalls] = useState<Record<string, Call>>({});
-  const [selectedCall, setSelectedCall] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-    });
-
-    const channel = pusher.subscribe('calls');
-    
-    channel.bind('new-call', (data: Call) => {
-      setActiveCalls(prev => ({ ...prev, [data.callSid]: data }));
-      // Auto-select if it's the only call
-      setSelectedCall(current => !current ? data.callSid : current);
-    });
-
-    channel.bind('call-update', (data: { callSid: string; transcript: Call['transcript'] }) => {
-      setActiveCalls(prev => ({
-        ...prev,
-        [data.callSid]: {
-          ...prev[data.callSid],
-          transcript: data.transcript,
-        },
-      }));
-    });
-
-    return () => {
-      pusher.unsubscribe('calls');
-      pusher.disconnect();
-    };
-  }, []);
-
-  const takeOverCall = async (callSid: string) => {
-    try {
-      await fetch('/api/take-over-call', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callSid }),
-      });
-      
-      // Remove call from active calls
-      setActiveCalls(prev => {
-        const newCalls = { ...prev };
-        delete newCalls[callSid];
-        return newCalls;
-      });
-      
-      if (selectedCall === callSid) {
-        setSelectedCall(null);
-      }
-    } catch (error) {
-      alert('Failed to take over call. Please try again.');
-    }
-  };
+    // Redirect to dashboard
+    router.push('/dashboard');
+  }, [router]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">AI Call Assistant</h1>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white p-8">
+      <div className="text-center">
+        <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+          <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
         </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Calls List */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-4 border-b">
-                <h2 className="text-lg font-medium text-gray-900">Active Calls</h2>
-              </div>
-              <div className="divide-y divide-gray-200">
-                {Object.keys(activeCalls).length === 0 ? (
-                  <p className="p-4 text-gray-500 text-center">No active calls</p>
-                ) : (
-                  Object.entries(activeCalls).map(([callSid, call]) => (
-                    <button
-                      key={callSid}
-                      onClick={() => setSelectedCall(callSid)}
-                      className={`w-full text-left p-4 hover:bg-gray-50 focus:outline-none ${selectedCall === callSid ? 'bg-blue-50' : ''}`}
-                    >
-                      <p className="font-medium text-gray-900">{call.callerNumber}</p>
-                      <p className="text-sm text-gray-500 truncate">{call.transcript?.length || 0} messages</p>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Conversation View */}
-          <div className="lg:col-span-2">
-            {selectedCall && activeCalls[selectedCall] ? (
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b flex justify-between items-center">
-                  <div>
-                    <h2 className="text-lg font-medium text-gray-900">
-                      Call from {activeCalls[selectedCall].callerNumber}
-                    </h2>
-                    <p className="text-sm text-gray-500">Call ID: {selectedCall}</p>
-                  </div>
-                  <button
-                    onClick={() => takeOverCall(selectedCall)}
-                    className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    Take Over Call
-                  </button>
-                </div>
-                <div className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
-                  {activeCalls[selectedCall].transcript?.map((line, i) => (
-                    <div 
-                      key={i} 
-                      className={`flex ${line.speaker === 'AI' ? 'justify-start' : 'justify-end'}`}
-                    >
-                      <div 
-                        className={`max-w-[80%] p-3 rounded-lg ${line.speaker === 'AI' 
-                          ? 'bg-blue-100 text-blue-900' 
-                          : 'bg-gray-100 text-gray-900'}`}
-                      >
-                        <p className="text-sm font-medium mb-1">{line.speaker}</p>
-                        <p>{line.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
-                <p className="text-gray-500">Select a call to view the conversation</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
+        <h1 className="text-3xl font-bold mb-2">Phoney</h1>
+        <p className="text-xl text-gray-600 mb-8">AI Phone Assistant</p>
+        <p className="text-gray-500">Redirecting to dashboard...</p>
+      </div>
+    </main>
   );
 }
