@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="400" version="1.1" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+   <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+   <stop offset="100%" style="stop-color:#50E3C2;stop-opacity:1" />
+  </linearGradient>
+  <!-- Animation for the typing effect -->
+  <style type="text/css">
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    .typing-text {
+      animation: typing 3s steps(40, end) infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+  </style>
+ </defs>
+ <!-- Dashboard mockup -->
+ <rect x="50" y="50" width="700" height="300" rx="10" fill="#fff" stroke="#000"/>
+ <!-- Header -->
+ <rect x="50" y="50" width="700" height="50" rx="10" fill="url(#grad)"/>
+ <text x="400" y="82" text-anchor="middle" fill="#fff" font-family="Arial" font-size="24">Phoney Dashboard</text>
+ <!-- Call visualization -->
+ <g class="pulse" transform="translate(100,150)">
+  <circle cx="50" cy="50" r="30" fill="#4A90E2"/>
+  <path d="M35,50 C35,35 65,35 65,50 C65,65 35,65 35,50" fill="none" stroke="#fff" stroke-width="3"/>
+ </g>
+ <!-- Transcription -->
+ <g transform="translate(200,130)">
+  <rect x="0" y="0" width="400" height="140" rx="5" fill="#f5f5f5"/>
+  <text x="20" y="30" class="typing-text" font-family="monospace" font-size="14">
+    "Hello! How can I assist you today?"
+  </text>
+  <text x="20" y="60" class="typing-text" font-family="monospace" font-size="14">
+    "I'd like to schedule an appointment."
+  </text>
+  <text x="20" y="90" class="typing-text" font-family="monospace" font-size="14">
+    "I can help you with that. What time works best?"
+  </text>
+ </g>
+</svg>
