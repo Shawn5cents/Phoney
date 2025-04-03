@@ -1,0 +1,34 @@
+remote_theme: pages-themes/cayman@v0.2.0
+plugins:
+- jekyll-remote-theme
+
+title: 📞 Phoney Docs
+description: Documentation for the Phoney AI Call Assistant
+show_downloads: true
+google_analytics: [Your tracking ID]
+
+# Navigation
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - API Reference: api-reference.md
+  - Contributing: contributing.md
+  - Deployment: deployment.md
+
+# Theme customization
+colors:
+  header: "#000"
+  gradient_left: "#4A90E2"
+  gradient_right: "#50E3C2"
+
+# Footer
+footer:
+  copyright: "© 2025 Phoney. All rights reserved."
+  links:
+    - text: GitHub
+      url: https://github.com/yourusername/phoney
+    - text: Issues
+      url: https://github.com/yourusername/phoney/issues
+    - text: Discussions
+      url: https://github.com/yourusername/phoney/discussions
