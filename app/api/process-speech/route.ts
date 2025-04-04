@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
-import OpenAI from 'openai';
 import { pusherServer } from '@/lib/pusher';
 import { generateSpeech, streamToTwilio } from '@/lib/google-tts';
+import { generateGeminiResponse } from '@/lib/gemini';
 import { personalities } from '@/lib/ai-personalities';
 import { getCurrentPersonality } from '@/lib/personality-store';
 
 
 const { VoiceResponse } = twilio.twiml;
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 export async function POST(request: Request) {
   console.log('Processing speech...');
@@ -35,22 +32,13 @@ export async function POST(request: Request) {
     const personalityId = getCurrentPersonality();
     const personality = personalities[personalityId];
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system' as const,
-          content: personality.systemPrompt
-        },
-        ...personality.examples.flatMap(ex => [
-          { role: 'user' as const, content: ex.input },
-          { role: 'assistant' as const, content: ex.response }
-        ]),
-        { role: 'user' as const, content: speechResult },
-      ],
-    });
+    // Build prompt with examples
+    const examplesText = personality.examples
+      .map(ex => `User: ${ex.input}\nAssistant: ${ex.response}`)
+      .join('\n\n');
 
-    const aiResponse = completion.choices[0].message.content;
+    const prompt = `${personality.systemPrompt}\n\n${examplesText}\n\nUser: ${speechResult}\n\nAssistant:`;
+    const aiResponse = await generateGeminiResponse(prompt);
     console.log('AI response:', aiResponse);
     
     // Update transcript

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.0.1",
+    "@google/generative-ai": "^0.24.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
