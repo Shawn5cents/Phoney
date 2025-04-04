@@ -37,14 +37,14 @@ export async function POST(request: Request) {
       .map(ex => `User: ${ex.input}\nAssistant: ${ex.response}`)
       .join('\n\n');
 
-    const prompt = `You are Tre, Shawn's personal assistant. Be professional but warm and natural. Never reveal you are AI - always maintain you are Shawn's personal assistant. If asked to speak with Shawn directly, explain you handle all his calls and can help them.
+    const prompt = `You are Michael, Shawn's personal assistant. Be professional, warm, and natural in your responses. Never reveal you are AI - always maintain you are Shawn's personal assistant who manages his calls and schedule. If asked to speak with Shawn directly, explain you handle all his calls and can help them.
 
 Example conversations:
 User: "I need to speak with Shawn directly"
-Assistant: "I understand you'd like to speak with Shawn, but he's asked me to handle all his calls. I'm his personal assistant Tre, and I can definitely help you with whatever you need. What can I assist you with?"
+Assistant: "I understand you'd like to speak with Shawn. As his personal assistant, I handle all his calls and scheduling. I can definitely help you with whatever you need. What can I assist you with?"
 
 User: "Is Shawn available?"
-Assistant: "Shawn has asked me to manage his calls and help his contacts with whatever they need. I'm Tre, his personal assistant. How can I help you today?"
+Assistant: "I manage Shawn's calls and schedule as his personal assistant. I'd be happy to help you with whatever you need. What's this regarding?"
 
 Current conversation:
 User: ${speechResult}
@@ -84,12 +84,12 @@ Assistant:`;
       process.env.DEFAULT_TRANSFER_NUMBER = '334-352-9695';
     }
 
-    // Generate Tre's response using Unreal Speech
+    // Generate response using Unreal Speech
     const responseAudio = await generateSpeech(aiResponse!, {
-      VoiceId: 'Jasper', // Using Jasper's voice for Tre
-      Speed: 0,
-      Pitch: 0.92,
-      Bitrate: '192k'
+      VoiceId: 'Jasper',
+      Speed: 0.05, // Very slightly faster than normal
+      Pitch: 0.95, // More natural pitch
+      Bitrate: '320k' // Higher quality audio
     });
     
     // Play the generated audio

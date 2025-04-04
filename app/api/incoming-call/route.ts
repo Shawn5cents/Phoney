@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     console.log('Using voice settings: Speed=-0.1, Pitch=0.95, Bitrate=320k');
     const welcomeAudio = await generateSpeech('Hi, this is Michael, Shawn\'s personal assistant. I help manage his calls and schedule. What can I assist you with today?', {
       VoiceId: 'Jasper',
-      Speed: -0.1, // Slightly slower for more natural pace
+      Speed: 0.05, // Very slightly faster than normal
       Pitch: 0.95, // More natural pitch
       Bitrate: '320k' // Higher quality audio
     });
