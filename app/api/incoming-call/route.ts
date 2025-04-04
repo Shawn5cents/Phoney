@@ -40,7 +40,8 @@ export async function POST(request: Request) {
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
-    console.log('Generating greeting...');
+    console.log('=== GENERATING GREETING ===');
+    console.log('Using voice settings: Speed=-0.1, Pitch=0.95, Bitrate=320k');
     const welcomeAudio = await generateSpeech('Hi, this is Michael, Shawn\'s personal assistant. I help manage his calls and schedule. What can I assist you with today?', {
       VoiceId: 'Jasper',
       Speed: -0.1, // Slightly slower for more natural pace
