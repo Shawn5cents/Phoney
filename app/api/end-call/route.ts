@@ -7,11 +7,11 @@ const client = twilio(process.env.TWILIO_API_KEY_SID, process.env.TWILIO_API_KEY
 });
 
 export async function POST(request: Request) {
-  const { callId } = await request.json();
+  const { callSid } = await request.json();
 
   try {
     // End the call gracefully
-    await client.calls(callId)
+    await client.calls(callSid)
       .update({
         twiml: new twilio.twiml.VoiceResponse()
           .say('Thank you for calling. Goodbye.')
@@ -22,13 +22,13 @@ export async function POST(request: Request) {
     // Notify both channels that the call has ended
     await Promise.all([
       // Notify the specific call channel
-      pusherServer.trigger(`call-${callId}`, 'call.ended', {
-        callId,
+      pusherServer.trigger(`call-${callSid}`, 'call.ended', {
+        callId: callSid,
         timestamp: new Date().toISOString()
       }),
       // Notify the main calls channel
       pusherServer.trigger('calls', 'call.ended', {
-        callId
+        callId: callSid
       })
     ]);
 

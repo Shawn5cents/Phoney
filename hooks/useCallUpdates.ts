@@ -60,7 +60,7 @@ export function useCallUpdates(callId?: string) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ callId }),
+        body: JSON.stringify({ callSid: callId }),
       });
       
       if (!response.ok) {
@@ -80,7 +80,7 @@ export function useCallUpdates(callId?: string) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ callId }),
+        body: JSON.stringify({ callSid: callId }),
       });
       
       if (!response.ok) {
