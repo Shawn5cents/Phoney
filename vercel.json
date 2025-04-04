@@ -5,15 +5,16 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["iad1"],
-  "github": {
-    "silent": false,
-    "autoAlias": true,
-    "enabled": true
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
   },
   "env": {},
   "build": {
     "env": {
-      "NEXT_PUBLIC_BUILD_ID": "manual_build_trigger_2"
+      "NEXT_PUBLIC_BUILD_ID": "manual_build_trigger_3",
+      "VERCEL_FORCE_NO_BUILD_CACHE": "1"
     }
   }
 }
