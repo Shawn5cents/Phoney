@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       trim: 'trim-silence'
     });
 
-    // Generate Tre's greeting using Unreal Speech
+    // Generate Tre's greeting using Unreal Speech (Jasper's voice)
     const welcomeAudio = await generateSpeech('Hello, this is Tre, Shawn\'s personal assistant. He asked me to take his calls for him.', {
       VoiceId: 'Jasper', // Using Jasper's voice for Tre
       Speed: 0,
