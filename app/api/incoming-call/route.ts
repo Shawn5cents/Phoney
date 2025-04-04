@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
+    console.log('Generating Tre\'s greeting...');
     // Generate Tre's greeting using Unreal Speech (Jasper's voice)
     const welcomeAudio = await generateSpeech('Hello, this is Tre, Shawn\'s personal assistant. He asked me to take his calls for him.', {
       VoiceId: 'Jasper',
