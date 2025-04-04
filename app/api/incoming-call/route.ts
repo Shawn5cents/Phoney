@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
+import { generateSpeech, streamToTwilio } from '@/lib/google-tts';
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -39,11 +40,11 @@ export async function POST(request: Request) {
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
-    // Welcome message
-    twiml.say({ 
-      voice: 'man',
-      language: 'en-US'
-    }, 'Thank you for calling Nichols Transco. How can I help you?');
+    // Generate welcome message using Google TTS
+    const welcomeAudio = await generateSpeech('Thank you for calling Nichols Transco. How can I help you?', 'MALE');
+    
+    // Play the generated audio
+    twiml.play(await streamToTwilio(welcomeAudio));
 
     // Start gathering speech input
     const gather = twiml.gather({
@@ -55,11 +56,11 @@ export async function POST(request: Request) {
       enhanced: true
     });
 
-    // Add a timeout message
-    twiml.say({ 
-      voice: 'man',
-      language: 'en-US'
-    }, 'I didn\'t hear anything. Please call back if you need assistance.');
+    // Generate timeout message using Google TTS
+    const timeoutAudio = await generateSpeech('I didn\'t hear anything. Please call back if you need assistance.', 'MALE');
+    
+    // Play the generated audio
+    twiml.play(await streamToTwilio(timeoutAudio));
     
     const response = twiml.toString();
     console.log('Generated TwiML:', response);

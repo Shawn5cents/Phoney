@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import OpenAI from 'openai';
 import { pusherServer } from '@/lib/pusher';
+import { generateSpeech, streamToTwilio } from '@/lib/google-tts';
 import { personalities } from '@/lib/ai-personalities';
 import { getCurrentPersonality } from '@/lib/personality-store';
 
@@ -78,8 +79,11 @@ export async function POST(request: Request) {
     // Add a small pause
     twiml.pause({ length: 1 });
     
-    // Say the AI response
-    twiml.say({ voice: 'man', language: 'en-US' }, aiResponse!);
+    // Generate AI response using Google TTS
+    const responseAudio = await generateSpeech(aiResponse!, 'MALE');
+    
+    // Play the generated audio
+    twiml.play(await streamToTwilio(responseAudio));
     
     // Add another pause
     twiml.pause({ length: 1 });
@@ -107,7 +111,11 @@ export async function POST(request: Request) {
     console.error('Error processing speech:', error);
     
     const twiml = new VoiceResponse();
-    twiml.say({ voice: 'man', language: 'en-US' }, 'I apologize, but I encountered an error. Please try again.');
+    // Generate error message using Google TTS
+    const errorAudio = await generateSpeech('I apologize, but I encountered an error. Please try again.', 'MALE');
+    
+    // Play the error audio
+    twiml.play(await streamToTwilio(errorAudio));
     
     return new NextResponse(twiml.toString(), {
       headers: { 'Content-Type': 'text/xml; charset=utf-8' },
