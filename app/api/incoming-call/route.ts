@@ -9,6 +9,14 @@ const { VoiceResponse } = twilio.twiml;
 // Last updated: 2025-04-03 14:27
 export async function POST(request: Request) {
   console.log('=== START INCOMING CALL HANDLER ===');
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+  console.log(`Node Version: ${process.version}`);
+  console.log(`Memory Usage: ${JSON.stringify(process.memoryUsage())}`);
+  console.log('Environment check:', {
+    hasGoogleKey: !!process.env.GOOGLE_API_KEY,
+    googleKeyLength: process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.length : 0,
+    hasTwilioSid: !!process.env.TWILIO_ACCOUNT_SID,
+  });
   
   try {
     console.log('Parsing incoming call data...');
@@ -43,20 +51,35 @@ export async function POST(request: Request) {
     
     console.log('=== GENERATING GREETING ===');
     console.log('Using optimized voice settings with PROFESSIONAL personality');
+    console.log('About to call generateSpeech with text: "Hello?"');
     
     // Use consistent voice with professional personality settings
-    const welcomeAudio = await generateSpeech('Hello?', {
-      personalityType: 'PROFESSIONAL',
-      gender: 'MALE'
-      // Using personality defaults for all other settings
-    });
+    try {
+      console.log('Calling generateSpeech...');
+      const welcomeAudio = await generateSpeech('Hello?', {
+        personalityType: 'PROFESSIONAL',
+        gender: 'MALE'
+        // Using personality defaults for all other settings
+      });
+      console.log('generateSpeech completed successfully');
+      console.log('Audio URL type:', typeof welcomeAudio, 'Length:', welcomeAudio.length);
+      console.log('Audio URL preview:', welcomeAudio.substring(0, 50) + '...');
     
-    const audioUrl = await streamToTwilio(welcomeAudio);
-    console.log('=== AUDIO URL DETAILS ===');
-    console.log('Audio URL to play:', audioUrl);
+      const audioUrl = await streamToTwilio(welcomeAudio);
+      console.log('=== AUDIO URL DETAILS ===');
+      console.log('Audio URL to play type:', typeof audioUrl);
+      console.log('Audio URL to play length:', audioUrl.length);
+      console.log('Audio URL to play preview:', audioUrl.substring(0, 50) + '...');
     
-    // Play initial hello
-    twiml.play(audioUrl);
+      // Play initial hello
+      console.log('Adding play command to TwiML');
+      twiml.play(audioUrl);
+    } catch (speechError) {
+      console.error('Error generating or streaming speech:', speechError);
+      // Fall back to basic TwiML if TTS fails
+      console.log('Falling back to basic TwiML Say verb');
+      twiml.say('Hello? This is an automated assistant. How can I help you today?');
+    }
     
     // Wait 2 seconds
     twiml.pause({ length: 2 });
