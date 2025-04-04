@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     
     console.log('=== GENERATING GREETING ===');
     console.log('Using voice settings: Speed=-0.1, Pitch=0.95, Bitrate=320k');
-    const welcomeAudio = await generateSpeech('Hi, this is Michael, Shawn\'s personal assistant. I help manage his calls and schedule. What can I assist you with today?', {
+    const welcomeAudio = await generateSpeech('Hello?', {
       VoiceId: 'Jasper',
       Speed: 0.05, // Very slightly faster than normal
       Pitch: 0.95, // More natural pitch
@@ -53,7 +53,21 @@ export async function POST(request: Request) {
     console.log('=== AUDIO URL DETAILS ===');
     console.log('Audio URL to play:', audioUrl);
     
-    // Play the greeting and gather speech
+    // Play initial hello
+    twiml.play(audioUrl);
+    
+    // Wait 2 seconds
+    twiml.pause({ length: 2 });
+    
+    // Follow up if no response
+    const followUpAudio = await generateSpeech('Hello? Anyone there?', {
+      VoiceId: 'Jasper',
+      Speed: 0.05,
+      Pitch: 0.95,
+      Bitrate: '320k'
+    });
+    
+    // Gather speech after follow-up
     const gather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
@@ -63,7 +77,7 @@ export async function POST(request: Request) {
       enhanced: true
     });
     
-    gather.play(audioUrl);
+    gather.play(await streamToTwilio(followUpAudio));
     
     const response = twiml.toString();
     console.log('Generated TwiML:', response);
