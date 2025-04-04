@@ -49,7 +49,10 @@ export async function POST(request: Request) {
     });
     
     const audioUrl = await streamToTwilio(welcomeAudio);
+    console.log('=== AUDIO URL DETAILS ===');
     console.log('Audio URL to play:', audioUrl);
+    console.log('URL length:', audioUrl.length);
+    console.log('URL starts with:', audioUrl.substring(0, 50));
     
     // Play the greeting directly from URL
     twiml.play(audioUrl);
