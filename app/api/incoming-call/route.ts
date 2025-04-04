@@ -41,12 +41,13 @@ export async function POST(request: Request) {
     const twiml = new VoiceResponse();
     
     console.log('=== GENERATING GREETING ===');
-    console.log('Using voice settings: Speed=-0.1, Pitch=0.95, Bitrate=320k');
+    console.log('Using optimized voice settings with PROFESSIONAL personality');
+    
+    // Use consistent voice with professional personality settings
     const welcomeAudio = await generateSpeech('Hello?', {
-      VoiceId: 'Jasper',
-      Speed: 0.05, // Very slightly faster than normal
-      Pitch: 0.95, // More natural pitch
-      Bitrate: '320k' // Higher quality audio
+      PersonalityType: 'PROFESSIONAL',
+      // No need to specify VoiceId, Speed, Pitch - using personality defaults
+      Bitrate: '320k' // Highest quality audio
     });
     
     const audioUrl = await streamToTwilio(welcomeAudio);
@@ -59,11 +60,10 @@ export async function POST(request: Request) {
     // Wait 2 seconds
     twiml.pause({ length: 2 });
     
-    // Follow up if no response
+    // Follow up if no response - use same personality for consistency
     const followUpAudio = await generateSpeech('Hello? Anyone there?', {
-      VoiceId: 'Jasper',
-      Speed: 0.05,
-      Pitch: 0.95,
+      PersonalityType: 'PROFESSIONAL',
+      // Using same voice throughout the call for natural experience
       Bitrate: '320k'
     });
     
@@ -96,12 +96,10 @@ export async function POST(request: Request) {
     
     try {
       const twiml = new VoiceResponse();
-      // Generate error message using Unreal Speech
+      // Generate error message using optimized voice settings
       const errorAudio = await generateSpeech('I apologize, but I encountered a technical issue. Please try your call again.', {
-        VoiceId: voices.MALE[1], // Using Jasper's voice
-        Speed: 0,
-        Pitch: 0.92,
-        Bitrate: '192k'
+        PersonalityType: 'PROFESSIONAL', // Maintain same personality as main flow
+        Bitrate: '320k' // Highest quality for clarity
       });
       
       // Play the error audio

@@ -16,7 +16,68 @@ interface UnrealSpeechOptions {
   Pitch?: number; // 0.5 to 1.5
   Bitrate?: '16k' | '32k' | '48k' | '64k' | '128k' | '192k' | '256k' | '320k';
   TimestampType?: 'word' | 'sentence';
+  PersonalityType?: 'PROFESSIONAL' | 'FRIENDLY' | 'WITTY' | 'ZEN';
 }
+
+// Optimized voice settings for each personality type
+const PERSONALITY_SETTINGS = {
+  PROFESSIONAL: {
+    MALE: {
+      VoiceId: 'Jasper' as VoiceId,
+      Speed: 0,        // Natural pace
+      Pitch: 0.98,     // Very close to natural pitch
+      Bitrate: '320k' as const  // Highest quality
+    },
+    FEMALE: {
+      VoiceId: 'Melody' as VoiceId,
+      Speed: 0,
+      Pitch: 1.0,
+      Bitrate: '320k' as const
+    }
+  },
+  FRIENDLY: {
+    MALE: {
+      VoiceId: 'Noah' as VoiceId,
+      Speed: 0.05,     // Slightly faster for friendly tone
+      Pitch: 1.0,      // Natural pitch
+      Bitrate: '320k' as const
+    },
+    FEMALE: {
+      VoiceId: 'Hannah' as VoiceId,
+      Speed: 0.05,
+      Pitch: 1.02,     // Slightly higher for friendly tone
+      Bitrate: '320k' as const
+    }
+  },
+  WITTY: {
+    MALE: {
+      VoiceId: 'Ethan' as VoiceId,
+      Speed: 0.1,      // Faster for witty responses
+      Pitch: 1.03,     // Slightly higher for expressive tone
+      Bitrate: '320k' as const
+    },
+    FEMALE: {
+      VoiceId: 'Ivy' as VoiceId,
+      Speed: 0.1,
+      Pitch: 1.05,
+      Bitrate: '320k' as const
+    }
+  },
+  ZEN: {
+    MALE: {
+      VoiceId: 'Daniel' as VoiceId,
+      Speed: -0.1,     // Slower for calming tone
+      Pitch: 0.97,     // Slightly lower for calm tone
+      Bitrate: '320k' as const
+    },
+    FEMALE: {
+      VoiceId: 'Luna' as VoiceId,
+      Speed: -0.1,
+      Pitch: 0.98,
+      Bitrate: '320k' as const
+    }
+  }
+};
 
 export async function generateSpeech(
   text: string, 
@@ -25,6 +86,22 @@ export async function generateSpeech(
   try {
     console.log('Generating speech with Unreal Speech...');
     console.log('API Key:', UNREAL_SPEECH_API_KEY ? 'Present' : 'Missing');
+    
+    // Apply personality settings if specified
+    let finalOptions = { ...options };
+    
+    if (options.PersonalityType) {
+      const gender = getGenderFromVoiceId(options.VoiceId) || 'MALE';
+      const personalitySettings = PERSONALITY_SETTINGS[options.PersonalityType][gender];
+      
+      // Apply personality settings but allow overrides from options
+      finalOptions = {
+        ...personalitySettings,
+        ...options,
+      };
+    }
+    
+    // Ensure we're using maximum quality settings
     const response = await fetch(UNREAL_SPEECH_API_URL, {
       method: 'POST',
       headers: {
@@ -33,12 +110,12 @@ export async function generateSpeech(
       },
       body: JSON.stringify({
         Text: text,
-        VoiceId: options.VoiceId || 'Jasper', // Default to Jasper voice
-        Speed: options.Speed || 0,
-        Pitch: options.Pitch || 0.92, // Slightly lower pitch for male voice
-        Bitrate: options.Bitrate || '192k',
+        VoiceId: finalOptions.VoiceId || 'Jasper',
+        Speed: finalOptions.Speed ?? 0,       // Use nullish coalescing to handle 0 value
+        Pitch: finalOptions.Pitch || 0.98,    // Natural sounding pitch
+        Bitrate: finalOptions.Bitrate || '320k', // Highest quality audio
         OutputFormat: 'uri',
-        TimestampType: options.TimestampType || 'sentence'
+        TimestampType: finalOptions.TimestampType || 'word' // Word-level timestamps for better control
       }),
     });
 
@@ -55,15 +132,23 @@ export async function generateSpeech(
   }
 }
 
+// Helper function to determine gender from voice ID
+function getGenderFromVoiceId(voiceId?: VoiceId): 'MALE' | 'FEMALE' | undefined {
+  if (!voiceId) return undefined;
+  
+  if (voices.MALE.includes(voiceId)) {
+    return 'MALE';
+  } else if (voices.FEMALE.includes(voiceId)) {
+    return 'FEMALE';
+  }
+  
+  return undefined;
+}
+
 // Helper function to stream audio to Twilio
 export async function streamToTwilio(audioData: string): Promise<string> {
   try {
-    // Remove the data URL prefix and convert back to buffer
-    const base64Data = audioData.replace(/^data:audio\/mp3;base64,/, '');
-    const audioBuffer = Buffer.from(base64Data, 'base64');
-
-    // For now, we'll return a data URL that Twilio can play
-    // In production, you might want to stream this through a CDN or your own server
+    // Unreal Speech already returns URLs that Twilio can play
     return audioData;
   } catch (error) {
     console.error('Error streaming to Twilio:', error);

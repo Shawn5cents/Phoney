@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
-import { generateSpeech, streamToTwilio, voices } from '@/lib/unreal-speech';
+import { generateSpeech, streamToTwilio } from '@/lib/unreal-speech';
 import { generateGeminiResponse } from '@/lib/gemini';
-
-
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -29,11 +27,6 @@ export async function POST(request: Request) {
     console.log('Getting AI response...');
     console.log('Speech received:', speechResult);
 
-    // Build prompt with examples
-    const examplesText = personality.examples
-      .map(ex => `User: ${ex.input}\nAssistant: ${ex.response}`)
-      .join('\n\n');
-
     const prompt = `You are Michael, Shawn's personal assistant. Be casual and friendly but professional. Never reveal you are AI. Keep responses brief and natural, like a real person would speak. If asked about Shawn, explain that he's not available but you handle his calls now. Keep responses under 30 words.
 
 Example conversations:
@@ -49,6 +42,7 @@ Assistant: "I get that, but I handle all his calls now. I can help or have him c
 Current conversation:
 User: ${speechResult}
 Assistant:`;
+
     const aiResponse = await generateGeminiResponse(prompt);
     console.log('AI response:', aiResponse);
     
@@ -77,12 +71,6 @@ Assistant:`;
     
     // Add a small pause
     twiml.pause({ length: 1 });
-    
-    // Set default transfer number
-    process.env.DEFAULT_TRANSFER_NUMBER = '334-352-9695';
-    if (!process.env.DEFAULT_TRANSFER_NUMBER) {
-      process.env.DEFAULT_TRANSFER_NUMBER = '334-352-9695';
-    }
 
     // Generate response using Unreal Speech
     const responseAudio = await generateSpeech(aiResponse!, {
@@ -99,38 +87,42 @@ Assistant:`;
     twiml.pause({ length: 1 });
     
     // Set up next speech gathering
-    twiml.gather({
+    const gather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
       speechTimeout: 'auto',
-      language: 'en-US',
-      timeout: 5,
+      speechModel: 'phone_call',
+      enhanced: true
     });
 
-    const response = twiml.toString();
-    console.log('TwiML Response:', response);
-
-    return new NextResponse(response, {
-      headers: { 
-        'Content-Type': 'text/xml; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-      },
+    return new NextResponse(twiml.toString(), {
+      headers: { 'Content-Type': 'text/xml; charset=utf-8' },
     });
+
   } catch (error) {
     console.error('Error processing speech:', error);
     
+    // Generate error response
     const twiml = new VoiceResponse();
-    // Generate error message using Unreal Speech
-    const errorAudio = await generateSpeech('I apologize, but I encountered an error. Please try again.', {
-      VoiceId: voices.MALE[1], // Using Jasper's voice
-      Speed: 0,
-      Pitch: 0.92,
-      Bitrate: '192k'
+    const errorAudio = await generateSpeech('I apologize, but I encountered a technical issue. Could you please repeat that?', {
+      VoiceId: 'Noah',
+      Speed: 0.1,
+      Pitch: 0.98,
+      Bitrate: '320k'
     });
     
-    // Play the error audio
     twiml.play(await streamToTwilio(errorAudio));
+    
+    // Try again
+    const gather = twiml.gather({
+      input: ['speech'],
+      action: '/api/process-speech',
+      method: 'POST',
+      speechTimeout: 'auto',
+      speechModel: 'phone_call',
+      enhanced: true
+    });
     
     return new NextResponse(twiml.toString(), {
       headers: { 'Content-Type': 'text/xml; charset=utf-8' },
