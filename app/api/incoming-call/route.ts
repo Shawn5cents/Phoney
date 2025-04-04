@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     
     // Welcome message
     twiml.say({ 
-      voice: 'Polly.Amy',
+      voice: 'Polly.Matthew',
       language: 'en-US'
     }, 'Thank you for calling Nichols Transco. How can I help you?');
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
     // Add a timeout message
     twiml.say({ 
-      voice: 'Polly.Amy',
+      voice: 'Polly.Matthew',
       language: 'en-US'
     }, 'I didn\'t hear anything. Please call back if you need assistance.');
     
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     try {
       const twiml = new VoiceResponse();
       twiml.say({
-        voice: 'Polly.Amy',
+        voice: 'Polly.Matthew',
         language: 'en-US'
       }, 'I apologize, but I encountered a technical issue. Please try your call again.');
       
