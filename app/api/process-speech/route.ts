@@ -3,6 +3,7 @@ import twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
 import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
 import { generateGeminiResponse } from '@/lib/gemini';
+import { personalities } from '@/lib/ai-personalities';
 
 
 
@@ -29,6 +30,9 @@ export async function POST(request: Request) {
     console.log('Getting AI response...');
     console.log('Speech received:', speechResult);
 
+    // Select a default personality (friendly)
+    const personality = personalities.friendly;
+    
     // Build prompt with examples
     const examplesText = personality.examples
       .map(ex => `User: ${ex.input}\nAssistant: ${ex.response}`)
