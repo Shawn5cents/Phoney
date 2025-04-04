@@ -82,6 +82,7 @@ export async function POST(request: Request) {
     }
   }
   finally {
+    console.log('Response sent, ending call handler');
     console.log('=== END INCOMING CALL HANDLER ===');
   }
 }
