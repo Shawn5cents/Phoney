@@ -48,8 +48,11 @@ export async function POST(request: Request) {
       Bitrate: '192k'
     });
     
-    console.log('Playing greeting...');
-    twiml.play(await streamToTwilio(welcomeAudio));
+    const audioUrl = await streamToTwilio(welcomeAudio);
+    console.log('Audio URL to play:', audioUrl);
+    
+    // Play the greeting directly from URL
+    twiml.play(audioUrl);
     
     const response = twiml.toString();
     console.log('Generated TwiML:', response);
