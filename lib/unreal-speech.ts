@@ -23,6 +23,8 @@ export async function generateSpeech(
   options: UnrealSpeechOptions = {}
 ): Promise<string> {
   try {
+    console.log('Generating speech with Unreal Speech...');
+    console.log('API Key:', UNREAL_SPEECH_API_KEY ? 'Present' : 'Missing');
     const response = await fetch(UNREAL_SPEECH_API_URL, {
       method: 'POST',
       headers: {
@@ -45,16 +47,8 @@ export async function generateSpeech(
     }
 
     const data = await response.json();
-    
-    // The API now returns a URL to the audio file
-    const audioResponse = await fetch(data.OutputUri);
-    if (!audioResponse.ok) {
-      throw new Error('Failed to fetch audio file');
-    }
-
-    const audioBuffer = await audioResponse.arrayBuffer();
-    const base64Audio = Buffer.from(audioBuffer).toString('base64');
-    return `data:audio/mp3;base64,${base64Audio}`;
+    console.log('Unreal Speech response:', data);
+    return data.OutputUri; // Return the audio URL directly
   } catch (error) {
     console.error('Error generating speech:', error);
     throw error;
