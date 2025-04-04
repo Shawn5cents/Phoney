@@ -46,8 +46,12 @@ export async function POST(request: Request) {
       method: 'POST',
       recordingStatusCallback: '/api/recording-status',
       recordingStatusCallbackMethod: 'POST',
-      trim: 'trim-silence'
+      trim: 'trim-silence',
+      playBeep: false
     });
+
+    // Add a small pause before greeting
+    twiml.pause({ length: 1 });
 
     // Generate Tre's greeting using Unreal Speech (Jasper's voice)
     const welcomeAudio = await generateSpeech('Hello, this is Tre, Shawn\'s personal assistant. He asked me to take his calls for him.', {
@@ -57,10 +61,7 @@ export async function POST(request: Request) {
       Bitrate: '192k'
     });
     
-    // Play the generated audio
-    twiml.play(await streamToTwilio(welcomeAudio));
-
-    // Start gathering speech input with a timeout
+    // Play the generated audio in gather
     const gather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
@@ -68,8 +69,10 @@ export async function POST(request: Request) {
       speechTimeout: 'auto',
       speechModel: 'phone_call',
       enhanced: true,
-      timeout: 5
+      timeout: 7
     });
+    
+    gather.play(await streamToTwilio(welcomeAudio));
 
     // If no response, say hello again
     const followUpAudio = await generateSpeech('Hello? This is Tre, Shawn\'s personal assistant. Is anyone there?', {
