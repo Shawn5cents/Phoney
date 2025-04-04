@@ -19,11 +19,18 @@ export async function POST(request: Request) {
           .toString()
       });
 
-    // Notify clients that the call has ended
-    await pusherServer.trigger(`call-${callId}`, 'call.ended', {
-      callId,
-      timestamp: new Date().toISOString()
-    });
+    // Notify both channels that the call has ended
+    await Promise.all([
+      // Notify the specific call channel
+      pusherServer.trigger(`call-${callId}`, 'call.ended', {
+        callId,
+        timestamp: new Date().toISOString()
+      }),
+      // Notify the main calls channel
+      pusherServer.trigger('calls', 'call.ended', {
+        callId
+      })
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

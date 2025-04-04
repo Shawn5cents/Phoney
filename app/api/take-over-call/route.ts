@@ -9,13 +9,14 @@ export async function POST(request: Request) {
   const { callSid } = await request.json();
 
   try {
-    // End the call gracefully
+    // Redirect the call to the browser
+    const twiml = new twilio.twiml.VoiceResponse();
+    twiml.say({ voice: 'man', language: 'en-US' }, 'Transferring you to a human operator.');
+    twiml.redirect('/api/browser-call');
+
     await client.calls(callSid)
       .update({
-        twiml: new twilio.twiml.VoiceResponse()
-          .say('Thank you for calling. Goodbye.')
-          .hangup()
-          .toString()
+        twiml: twiml.toString()
       });
 
     return NextResponse.json({ success: true });
