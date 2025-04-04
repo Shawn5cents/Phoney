@@ -7,9 +7,10 @@ const { VoiceResponse } = twilio.twiml;
 // Last updated: 2025-04-03 14:27
 export async function POST(request: Request) {
   try {
-    console.log('Incoming call received');
+    console.log('Incoming call received - VERBOSE LOGGING ENABLED');
     
     const formData = await request.formData();
+    console.log('Form data received:', Object.fromEntries(formData.entries()));
     const callerNumber = formData.get('From') as string;
     const callSid = formData.get('CallSid') as string;
 
@@ -29,22 +30,23 @@ export async function POST(request: Request) {
       // Continue with the call even if dashboard notification fails
     }
     
+    console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
-    // Greet the caller
-    twiml.say({ voice: 'Polly.Amy', language: 'en-US' }, 'Hello! I am an AI assistant. How may I help you today?');
+    // Simple debug response
+    console.log('Adding debug message...');
+    twiml.say({ voice: 'Polly.Amy', language: 'en-US' }, 'This is a test call. If you hear this message, the call handling is working correctly.');
     
-    // Listen for speech
-    twiml.gather({
-      input: ['speech'],
-      action: '/api/process-speech',
-      method: 'POST',
-      speechTimeout: 'auto',
-      language: 'en-US',
-    });
+    // Just pause for 5 seconds to ensure the call stays connected
+    console.log('Adding pause...');
+    twiml.pause({ length: 5 });
+    
+    // Say goodbye
+    console.log('Adding goodbye message...');
+    twiml.say({ voice: 'Polly.Amy', language: 'en-US' }, 'Goodbye!');
 
     const response = twiml.toString();
-    console.log('TwiML Response:', response);
+    console.log('TwiML Response generated:', response);
 
     return new NextResponse(response, {
       headers: { 

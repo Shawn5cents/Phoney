@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 
     return new NextResponse(response, {
       headers: { 
-        'Content-Type': 'text/xml',
+        'Content-Type': 'text/xml; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     twiml.say('I apologize, but I encountered an error. Please try again.');
     
     return new NextResponse(twiml.toString(), {
-      headers: { 'Content-Type': 'text/xml' },
+      headers: { 'Content-Type': 'text/xml; charset=utf-8' },
     });
   }
 }
