@@ -28,6 +28,7 @@
     "typescript": "^5.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/language-server": "^0.14.13"
+    "@tailwindcss/language-server": "^0.14.13",
+    "sharp": "^0.33.5"
   }
 }

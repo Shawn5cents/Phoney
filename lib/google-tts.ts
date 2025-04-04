@@ -6,6 +6,12 @@ const client = new textToSpeech.TextToSpeechClient();
 
 export async function generateSpeech(text: string, gender: 'MALE' | 'FEMALE' = 'MALE'): Promise<string> {
   try {
+    // Check if credentials are configured
+    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      console.warn('Google Cloud credentials not configured, using fallback TTS');
+      throw new Error('Credentials not configured');
+    }
+
     // Construct the request
     const request = {
       input: { text },
@@ -33,7 +39,8 @@ export async function generateSpeech(text: string, gender: 'MALE' | 'FEMALE' = '
     return `data:audio/mp3;base64,${audioBuffer.toString('base64')}`;
   } catch (error) {
     console.error('Error generating speech:', error);
-    throw error;
+    // Return a URL to a default MP3 file
+    return 'https://api.twilio.com/cowbell.mp3';
   }
 }
 

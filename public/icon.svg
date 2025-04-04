@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle with Gradient -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#grad)"/>
+  
+  <!-- Phone Icon -->
+  <path d="M352 368C352 368 336 368 320 368C288 368 224 336 192 304C160 272 128 208 128 176C128 160 128 144 128 144C128 144 147.2 124.8 156.8 115.2C166.4 105.6 179.2 105.6 188.8 115.2L220.8 147.2C230.4 156.8 230.4 169.6 220.8 179.2L204.8 195.2C217.6 217.6 246.4 246.4 268.8 259.2L284.8 243.2C294.4 233.6 307.2 233.6 316.8 243.2L348.8 275.2C358.4 284.8 358.4 297.6 348.8 307.2L352 368Z" 
+        fill="white" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- AI Nodes (representing the AI aspect) -->
+  <circle cx="192" cy="256" r="12" fill="white"/>
+  <circle cx="256" cy="256" r="12" fill="white"/>
+  <circle cx="320" cy="256" r="12" fill="white"/>
+  <line x1="192" y1="256" x2="320" y2="256" stroke="white" stroke-width="4"/>
+</svg>

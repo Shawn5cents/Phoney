@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
-import { generateSpeech, streamToTwilio } from '@/lib/google-tts';
+import { generateSpeech, streamToTwilio, voices } from '@/lib/unreal-speech';
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -40,14 +40,49 @@ export async function POST(request: Request) {
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
-    // Generate welcome message using Google TTS
-    const welcomeAudio = await generateSpeech('Thank you for calling Nichols Transco. How can I help you?', 'MALE');
+    // Start recording the call
+    twiml.record({
+      action: '/api/save-recording',
+      method: 'POST',
+      recordingStatusCallback: '/api/recording-status',
+      recordingStatusCallbackMethod: 'POST',
+      trim: 'trim-silence'
+    });
+
+    // Generate Tre's greeting using Unreal Speech
+    const welcomeAudio = await generateSpeech('Hello, this is Tre, Shawn\'s personal assistant. He asked me to take his calls for him.', {
+      VoiceId: 'Jasper', // Using Jasper's voice for Tre
+      Speed: 0,
+      Pitch: 0.92,
+      Bitrate: '192k'
+    });
     
     // Play the generated audio
     twiml.play(await streamToTwilio(welcomeAudio));
 
-    // Start gathering speech input
+    // Start gathering speech input with a timeout
     const gather = twiml.gather({
+      input: ['speech'],
+      action: '/api/process-speech',
+      method: 'POST',
+      speechTimeout: 'auto',
+      speechModel: 'phone_call',
+      enhanced: true,
+      timeout: 5
+    });
+
+    // If no response, say hello again
+    const followUpAudio = await generateSpeech('Hello? This is Tre, Shawn\'s personal assistant. Is anyone there?', {
+      VoiceId: 'Jasper',
+      Speed: 0,
+      Pitch: 0.92,
+      Bitrate: '192k'
+    });
+    
+    twiml.play(await streamToTwilio(followUpAudio));
+    
+    // Try gathering speech again
+    const secondGather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
@@ -56,8 +91,13 @@ export async function POST(request: Request) {
       enhanced: true
     });
 
-    // Generate timeout message using Google TTS
-    const timeoutAudio = await generateSpeech('I didn\'t hear anything. Please call back if you need assistance.', 'MALE');
+    // Generate timeout message using Unreal Speech
+    const timeoutAudio = await generateSpeech('I didn\'t hear anything. Please call back if you need assistance.', {
+      VoiceId: voices.MALE[1], // Using Jasper's voice
+      Speed: 0,
+      Pitch: 0.92,
+      Bitrate: '192k'
+    });
     
     // Play the generated audio
     twiml.play(await streamToTwilio(timeoutAudio));
@@ -79,8 +119,13 @@ export async function POST(request: Request) {
     
     try {
       const twiml = new VoiceResponse();
-      // Generate error message using Google TTS
-      const errorAudio = await generateSpeech('I apologize, but I encountered a technical issue. Please try your call again.', 'MALE');
+      // Generate error message using Unreal Speech
+      const errorAudio = await generateSpeech('I apologize, but I encountered a technical issue. Please try your call again.', {
+        VoiceId: voices.MALE[1], // Using Jasper's voice
+        Speed: 0,
+        Pitch: 0.92,
+        Bitrate: '192k'
+      });
       
       // Play the error audio
       twiml.play(await streamToTwilio(errorAudio));

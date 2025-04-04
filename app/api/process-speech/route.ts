@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
-import { generateSpeech, streamToTwilio } from '@/lib/google-tts';
+import { generateSpeech, streamToTwilio, voices } from '@/lib/unreal-speech';
 import { generateGeminiResponse } from '@/lib/gemini';
 import { personalities } from '@/lib/ai-personalities';
 import { getCurrentPersonality } from '@/lib/personality-store';
@@ -37,7 +37,18 @@ export async function POST(request: Request) {
       .map(ex => `User: ${ex.input}\nAssistant: ${ex.response}`)
       .join('\n\n');
 
-    const prompt = `${personality.systemPrompt}\n\n${examplesText}\n\nUser: ${speechResult}\n\nAssistant:`;
+    const prompt = `You are Tre, Shawn's personal assistant. Be professional but warm and natural. Never reveal you are AI - always maintain you are Shawn's personal assistant. If asked to speak with Shawn directly, explain you handle all his calls and can help them.
+
+Example conversations:
+User: "I need to speak with Shawn directly"
+Assistant: "I understand you'd like to speak with Shawn, but he's asked me to handle all his calls. I'm his personal assistant Tre, and I can definitely help you with whatever you need. What can I assist you with?"
+
+User: "Is Shawn available?"
+Assistant: "Shawn has asked me to manage his calls and help his contacts with whatever they need. I'm Tre, his personal assistant. How can I help you today?"
+
+Current conversation:
+User: ${speechResult}
+Assistant:`;
     const aiResponse = await generateGeminiResponse(prompt);
     console.log('AI response:', aiResponse);
     
@@ -67,8 +78,19 @@ export async function POST(request: Request) {
     // Add a small pause
     twiml.pause({ length: 1 });
     
-    // Generate AI response using Google TTS
-    const responseAudio = await generateSpeech(aiResponse!, 'MALE');
+    // Set default transfer number
+    process.env.DEFAULT_TRANSFER_NUMBER = '334-352-9695';
+    if (!process.env.DEFAULT_TRANSFER_NUMBER) {
+      process.env.DEFAULT_TRANSFER_NUMBER = '334-352-9695';
+    }
+
+    // Generate Tre's response using Unreal Speech
+    const responseAudio = await generateSpeech(aiResponse!, {
+      VoiceId: 'Jasper', // Using Jasper's voice for Tre
+      Speed: 0,
+      Pitch: 0.92,
+      Bitrate: '192k'
+    });
     
     // Play the generated audio
     twiml.play(await streamToTwilio(responseAudio));
@@ -99,8 +121,13 @@ export async function POST(request: Request) {
     console.error('Error processing speech:', error);
     
     const twiml = new VoiceResponse();
-    // Generate error message using Google TTS
-    const errorAudio = await generateSpeech('I apologize, but I encountered an error. Please try again.', 'MALE');
+    // Generate error message using Unreal Speech
+    const errorAudio = await generateSpeech('I apologize, but I encountered an error. Please try again.', {
+      VoiceId: voices.MALE[1], // Using Jasper's voice
+      Speed: 0,
+      Pitch: 0.92,
+      Bitrate: '192k'
+    });
     
     // Play the error audio
     twiml.play(await streamToTwilio(errorAudio));
