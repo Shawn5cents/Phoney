@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     twiml.say({ 
       voice: 'Polly.Amy',
       language: 'en-US'
-    }, 'Hello! I am an AI assistant. How may I help you today?');
+    }, 'Thank you for calling Nichols Transco. How can I help you?');
 
     // Start gathering speech input
     const gather = twiml.gather({
