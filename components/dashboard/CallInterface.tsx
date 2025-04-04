@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Device } from 'twilio-client';
+import { Device } from '@twilio/voice-sdk';
 
 interface CallInterfaceProps {
   callId?: string;
@@ -29,12 +29,10 @@ export function CallInterface({ callId, onClose }: CallInterfaceProps) {
 
         // Initialize Twilio device
         const device = new Device(token, {
-          codecPreferences: ['opus', 'pcmu'],
-          fakeLocalDTMF: true,
-          enableRingingState: true,
+          edge: ['ashburn'],
+          maxAverageBitrate: 16000
         });
 
-        await device.register();
         deviceRef.current = device;
 
         // Connect to the call
