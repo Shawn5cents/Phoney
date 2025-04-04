@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     twiml.say({
       voice: 'man',
       language: 'en-US'
-    }, 'Please hold while I transfer you to a human operator.');
+    }, 'Please hold while I transfer you.');
     
     // Dial the transfer number
     twiml.dial().number(transferNumber);
