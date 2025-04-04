@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
-import { generateSpeech, streamToTwilio, voices } from '@/lib/unreal-speech';
+import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
 import { generateGeminiResponse } from '@/lib/gemini';
 
 
@@ -84,12 +84,10 @@ Assistant:`;
       process.env.DEFAULT_TRANSFER_NUMBER = '334-352-9695';
     }
 
-    // Generate response using Unreal Speech
+    // Generate response using Google's premium voice
     const responseAudio = await generateSpeech(aiResponse!, {
-      VoiceId: 'Noah',
-      Speed: 0.1, // Slightly faster
-      Pitch: 0.98, // Almost natural pitch
-      Bitrate: '320k' // Higher quality audio
+      personalityType: 'FRIENDLY',
+      gender: 'MALE'
     });
     
     // Play the generated audio
@@ -121,12 +119,10 @@ Assistant:`;
     console.error('Error processing speech:', error);
     
     const twiml = new VoiceResponse();
-    // Generate error message using Unreal Speech
+    // Generate error message using Google's premium voice
     const errorAudio = await generateSpeech('I apologize, but I encountered an error. Please try again.', {
-      VoiceId: voices.MALE[1], // Using Jasper's voice
-      Speed: 0,
-      Pitch: 0.92,
-      Bitrate: '192k'
+      personalityType: 'PROFESSIONAL',
+      gender: 'MALE'
     });
     
     // Play the error audio

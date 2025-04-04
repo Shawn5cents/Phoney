@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
-import { generateSpeech, streamToTwilio, voices } from '@/lib/unreal-speech';
+import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
 
 const client = twilio(process.env.TWILIO_API_KEY_SID, process.env.TWILIO_API_KEY_SECRET, {
   accountSid: process.env.TWILIO_ACCOUNT_SID
@@ -18,12 +18,10 @@ export async function POST(request: Request) {
     // Create TwiML to transfer the call
     const twiml = new twilio.twiml.VoiceResponse();
     
-    // Generate transfer message using Unreal Speech
+    // Generate transfer message using Google's premium voice
     const transferAudio = await generateSpeech('Please hold while I transfer you.', {
-      VoiceId: voices.MALE[1], // Using Jasper's voice
-      Speed: 0,
-      Pitch: 0.92,
-      Bitrate: '192k'
+      personalityType: 'PROFESSIONAL',
+      gender: 'MALE'
     });
     
     // Play the generated audio
