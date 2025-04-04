@@ -40,8 +40,16 @@ export async function POST(request: Request) {
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
-    // Simple say for testing
-    twiml.say('Hello, this is Tre. I am answering your call.');
+    console.log('Generating Tre\'s greeting...');
+    const welcomeAudio = await generateSpeech('Hello, this is Tre, Shawn\'s personal assistant. How can I help you today?', {
+      VoiceId: 'Jasper',
+      Speed: 0,
+      Pitch: 0.92,
+      Bitrate: '192k'
+    });
+    
+    console.log('Playing greeting...');
+    twiml.play(await streamToTwilio(welcomeAudio));
     
     const response = twiml.toString();
     console.log('Generated TwiML:', response);
