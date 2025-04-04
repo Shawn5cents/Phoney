@@ -8,7 +8,7 @@
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-412991?style=for-the-badge&logo=openai)](https://openai.com/)
+[![Google](https://img.shields.io/badge/Google-Gemini-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/technologies/gemini/)
 [![Twilio](https://img.shields.io/badge/Twilio-API-F22F46?style=for-the-badge&logo=twilio)](https://www.twilio.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
@@ -45,7 +45,7 @@
       <td>Custom AI personas for your business</td>
       <td>Intelligent call handling & forwarding</td>
       <td>Live transcription & monitoring</td>
-      <td>Instant human takeover capability</td>
+      <td>One-click call transfer to mobile</td>
     </tr>
   </table>
 </div>
@@ -127,9 +127,9 @@ npm run dev
         • Pusher
       </td>
       <td>
-        • OpenAI GPT-4<br>
-        • ElevenLabs Voice<br>
-        • Custom ML Models
+        • Google Gemini Pro<br>
+        • Google Cloud TTS<br>
+        • Neural Voice Models
       </td>
       <td>
         • Vercel/Railway<br>
@@ -156,7 +156,7 @@ const customPersonality = {
   name: "Customer Service",
   description: "Helpful retail assistant",
   systemPrompt: `You are a retail assistant...",
-  voiceId: "en-US-JennyNeural",
+  voiceGender: "FEMALE", // Uses Google's neural voices
   traits: ["Helpful", "Patient", "Knowledgeable"],
   examples: [
     {
@@ -171,8 +171,8 @@ const customPersonality = {
 
 ```env
 # AI Configuration
-OPENAI_API_KEY=your_openai_key
-ELEVENLABS_API_KEY=your_elevenlabs_key
+GEMINI_API_KEY=your_gemini_key
+GOOGLE_APPLICATION_CREDENTIALS=path_to_credentials.json
 
 # Twilio Configuration
 TWILIO_ACCOUNT_SID=your_account_sid

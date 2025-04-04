@@ -5,8 +5,7 @@
 Before you begin, ensure you have:
 - Node.js 18+ installed
 - A Twilio account
-- An OpenAI API key
-- An ElevenLabs account
+- A Google Cloud account with Gemini API access
 - A Pusher account
 
 ## ⚡ Quick Start
@@ -37,15 +36,11 @@ Before you begin, ensure you have:
 2. Set webhook URL to `[Your Domain]/api/incoming-call`
 3. Configure voice capabilities
 
-### OpenAI Configuration
-1. Set up GPT-4 access
-2. Configure system prompts
-3. Test responses
-
-### ElevenLabs Voice
-1. Create a custom voice
-2. Get voice ID
-3. Test voice output
+### Google Cloud Setup
+1. Enable Gemini API
+2. Set up Google Cloud credentials
+3. Enable Cloud Text-to-Speech API
+4. Configure neural voice models
 
 ### Pusher Setup
 1. Create new channels app
@@ -71,6 +66,6 @@ Access these dashboards:
 
 Common issues and solutions:
 - Call not connecting? Check Twilio webhook
-- No audio? Verify ElevenLabs setup
-- Delayed responses? Check OpenAI quota
+- No audio? Verify Google Cloud TTS setup
+- Delayed responses? Check Gemini API quota
 - No real-time updates? Verify Pusher config
