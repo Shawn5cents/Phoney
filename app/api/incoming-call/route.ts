@@ -17,6 +17,13 @@ export async function POST(request: Request) {
 
     // Notify dashboard of new call
     try {
+      // Notify the main dashboard channel
+      await pusherServer.trigger('calls', 'call.started', {
+        callId: callSid,
+        caller: callerNumber
+      });
+
+      // Notify the specific call channel
       await pusherServer.trigger(`call-${callSid}`, 'call.started', {
         callId: callSid,
         caller: callerNumber,

@@ -8,10 +8,32 @@ import {
   PersonalitySelector
 } from '@/components';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { pusherClient } from '@/lib/pusher';
 
 export default function DashboardPage() {
   const [activeCallId, setActiveCallId] = useState<string>();
+
+  // Listen for new calls
+  useEffect(() => {
+    const channel = pusherClient.subscribe('calls');
+
+    channel.bind('call.started', (data: { callId: string }) => {
+      console.log('New call received:', data);
+      setActiveCallId(data.callId);
+    });
+
+    channel.bind('call.ended', (data: { callId: string }) => {
+      console.log('Call ended:', data);
+      if (data.callId === activeCallId) {
+        setActiveCallId(undefined);
+      }
+    });
+
+    return () => {
+      pusherClient.unsubscribe('calls');
+    };
+  }, [activeCallId]);
   const [currentPersonality, setCurrentPersonality] = useState('professional');
 
   const handlePersonalityChange = useCallback(async (personalityId: string) => {
