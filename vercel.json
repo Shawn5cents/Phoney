@@ -7,7 +7,8 @@
   "regions": ["iad1"],
   "github": {
     "silent": false,
-    "autoAlias": true
+    "autoAlias": true,
+    "enabled": true
   },
   "env": {
     "OPENAI_API_KEY": "@openai-api-key",
@@ -19,5 +20,10 @@
     "PUSHER_KEY": "@pusher-key",
     "PUSHER_SECRET": "@pusher-secret",
     "PUSHER_CLUSTER": "@pusher-cluster"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_BUILD_ID": "manual_build_trigger_1"
+    }
   }
 }
