@@ -1,4 +1,4 @@
-const UNREAL_SPEECH_API_KEY = 'y7W6dApDQdjv54AcSJajhcF6K5ZYKLMNiAZE2ytv17QkUa5IBpJCXi';
+const UNREAL_SPEECH_API_KEY = process.env.UNREAL_SPEECH_API_KEY!;
 const UNREAL_SPEECH_API_URL = 'https://api.v8.unrealspeech.com/speech';
 
 // American voices
