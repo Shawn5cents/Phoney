@@ -11,8 +11,8 @@ export async function POST(request: Request) {
     // Create an access token
     const accessToken = new AccessToken(
       process.env.TWILIO_ACCOUNT_SID!,
-      process.env.TWILIO_API_KEY_SID!,
-      process.env.TWILIO_API_KEY_SECRET!,
+      process.env.TWILIO_ACCOUNT_SID!,  // Using account SID as API key SID
+      process.env.TWILIO_AUTH_TOKEN!,   // Using auth token as API key secret
       { identity: 'human-operator' }
     );
 

@@ -9,6 +9,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Google](https://img.shields.io/badge/Google-Gemini-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/technologies/gemini/)
+[![Unreal Speech](https://img.shields.io/badge/Unreal-Speech-FF4088?style=for-the-badge&logo=unrealengine)](https://unrealspeech.com/)
 [![Twilio](https://img.shields.io/badge/Twilio-API-F22F46?style=for-the-badge&logo=twilio)](https://www.twilio.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
@@ -42,46 +43,46 @@
       <td align="center">🎛️ <b>Control</b></td>
     </tr>
     <tr>
-      <td>Custom AI personas for your business</td>
-      <td>Intelligent call handling & forwarding</td>
-      <td>Live transcription & monitoring</td>
-      <td>One-click call transfer to mobile</td>
+      <td>Meet Tre, your personal AI assistant</td>
+      <td>Intelligent call handling with auto-recording</td>
+      <td>Live transcription & call recording</td>
+      <td>One-click transfer with default number</td>
     </tr>
   </table>
 </div>
 
-### 🎭 AI Personalities
+### 🎭 Meet Tre - Your Personal AI Assistant
 
-Phoney comes with four distinct AI personalities, each designed for different business needs:
+Phoney features Tre, a sophisticated personal assistant designed to handle your calls with professionalism and warmth:
 
 <div align="center">
   <table>
     <tr>
-      <td align="center">👔 <b>Professional</b></td>
-      <td align="center">😊 <b>Friendly</b></td>
-      <td align="center">😄 <b>Witty</b></td>
-      <td align="center">🧘 <b>Zen</b></td>
+      <td align="center">🎯 <b>Natural Interaction</b></td>
+      <td align="center">📝 <b>Call Management</b></td>
+      <td align="center">🔄 <b>Smart Transfer</b></td>
+      <td align="center">🎙️ <b>Voice Quality</b></td>
     </tr>
     <tr>
-      <td>Business-focused, efficient</td>
-      <td>Warm and approachable</td>
-      <td>Clever with light humor</td>
-      <td>Calm and mindful</td>
+      <td>Professional yet warm</td>
+      <td>Auto-recording & transcription</td>
+      <td>Default number ready</td>
+      <td>Premium Jasper voice</td>
     </tr>
     <tr>
-      <td><i>Perfect for corporate</i></td>
-      <td><i>Great for customer service</i></td>
-      <td><i>Ideal for casual brands</i></td>
-      <td><i>Suited for wellness</i></td>
+      <td><i>Natural conversations</i></td>
+      <td><i>Never miss a detail</i></td>
+      <td><i>Seamless transfers</i></td>
+      <td><i>Crystal clear audio</i></td>
     </tr>
   </table>
 </div>
 
-#### Real-time Personality Switching
-- Switch personalities instantly from the dashboard
-- Each personality comes with unique voice settings
-- Customized conversation examples for consistent tone
-- Personality-specific prompts for authentic interactions
+#### Call Recording & Management
+- Automatic call recording for every conversation
+- Live transcription with real-time dashboard updates
+- High-quality voice using Unreal Speech's Jasper voice
+- Smart transfer system with configurable default number (334-352-9695)
 
 ## 🚀 Quick Start
 
@@ -151,17 +152,17 @@ npm run dev
 ### Configuring AI Personalities
 
 ```typescript
-// Example personality configuration
-const customPersonality = {
-  name: "Customer Service",
-  description: "Helpful retail assistant",
-  systemPrompt: `You are a retail assistant...",
-  voiceGender: "FEMALE", // Uses Google's neural voices
-  traits: ["Helpful", "Patient", "Knowledgeable"],
+// Tre's personality configuration
+const trePersonality = {
+  name: "Tre",
+  description: "Professional personal assistant",
+  systemPrompt: `You are Tre, Shawn's personal assistant. Be professional but warm...",
+  voice: "Jasper", // Uses Unreal Speech's premium voice
+  traits: ["Professional", "Warm", "Efficient"],
   examples: [
     {
-      input: "Do you have this in blue?",
-      response: "Let me check our inventory for you."
+      input: "I need to speak with Shawn directly",
+      response: "I understand you'd like to speak with Shawn, but he's asked me to handle all his calls. I'm his personal assistant Tre, and I can definitely help you with whatever you need."
     }
   ]
 };
@@ -172,7 +173,9 @@ const customPersonality = {
 ```env
 # AI Configuration
 GEMINI_API_KEY=your_gemini_key
-GOOGLE_APPLICATION_CREDENTIALS=path_to_credentials.json
+
+# Voice Configuration
+UNREAL_SPEECH_API_KEY=your_unreal_speech_key
 
 # Twilio Configuration
 TWILIO_ACCOUNT_SID=your_account_sid
@@ -184,6 +187,9 @@ PUSHER_APP_ID=your_app_id
 PUSHER_KEY=your_key
 PUSHER_SECRET=your_secret
 PUSHER_CLUSTER=your_cluster
+
+# Transfer Configuration
+DEFAULT_TRANSFER_NUMBER=334-352-9695
 ```
 
 ## 🤝 Contributing
