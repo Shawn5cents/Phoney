@@ -79,10 +79,11 @@ export async function POST(request: Request) {
     
     try {
       const twiml = new VoiceResponse();
-      twiml.say({
-        voice: 'man',
-        language: 'en-US'
-      }, 'I apologize, but I encountered a technical issue. Please try your call again.');
+      // Generate error message using Google TTS
+      const errorAudio = await generateSpeech('I apologize, but I encountered a technical issue. Please try your call again.', 'MALE');
+      
+      // Play the error audio
+      twiml.play(await streamToTwilio(errorAudio));
       
       return new NextResponse(twiml.toString(), {
         headers: { 'Content-Type': 'text/xml; charset=utf-8' },
