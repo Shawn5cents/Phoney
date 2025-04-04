@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
 
 const { VoiceResponse } = twilio.twiml;
@@ -16,19 +15,7 @@ export async function POST(request: Request) {
 
     console.log('Call from:', callerNumber, 'SID:', callSid);
 
-    // Notify dashboard of new call
-    try {
-      await pusherServer.trigger(`call-${callSid}`, 'call.started', {
-        callId: callSid,
-        caller: callerNumber,
-        status: 'active',
-        timestamp: new Date().toISOString()
-      });
-      console.log('Dashboard notified of new call');
-    } catch (pusherError) {
-      console.error('Failed to notify dashboard:', pusherError);
-      // Continue with the call even if dashboard notification fails
-    }
+    // Removed Pusher notification for testing
     
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
@@ -50,7 +37,7 @@ export async function POST(request: Request) {
 
     return new NextResponse(response, {
       headers: { 
-        'Content-Type': 'application/xml',
+        'Content-Type': 'text/xml; charset=utf-8',
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
@@ -62,7 +49,7 @@ export async function POST(request: Request) {
     twiml.say('I apologize, but I encountered an error. Please try again.');
     
     return new NextResponse(twiml.toString(), {
-      headers: { 'Content-Type': 'application/xml' },
+      headers: { 'Content-Type': 'text/xml; charset=utf-8' },
     });
   }
 }
