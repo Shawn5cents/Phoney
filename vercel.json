@@ -13,7 +13,7 @@
   "env": {},
   "build": {
     "env": {
-      "NEXT_PUBLIC_BUILD_ID": "manual_build_trigger_1"
+      "NEXT_PUBLIC_BUILD_ID": "manual_build_trigger_2"
     }
   }
 }
