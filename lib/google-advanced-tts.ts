@@ -61,6 +61,12 @@ interface VoiceOptions {
  */
 export async function generateSpeech(text: string, options: VoiceOptions = {}): Promise<string> {
   try {
+    // Check if Google API key is available
+    if (!GOOGLE_API_KEY || GOOGLE_API_KEY === 'your_google_api_key_here') {
+      console.error('Missing or invalid Google API key');
+      throw new Error('Google API key is not properly configured');
+    }
+
     const personality = options.personalityType || 'PROFESSIONAL';
     const gender = options.gender || 'MALE';
     
@@ -123,9 +129,17 @@ export async function generateSpeech(text: string, options: VoiceOptions = {}): 
     return `data:audio/mp3;base64,${audioData}`;
   } catch (error) {
     console.error('Error generating premium speech:', error);
+    console.error('Speech generation parameters:', {
+      text: text ? text.substring(0, 20) + '...' : 'empty',
+      personality: options.personalityType || 'PROFESSIONAL',
+      gender: options.gender || 'MALE',
+      apiKeyConfigured: !!GOOGLE_API_KEY
+    });
     
-    // Fall back to a simple Twilio voice in case of error
-    return 'https://api.twilio.com/cowbell.mp3';
+    // Fall back to Twilio's basic TTS instead of cowbell
+    // This creates a TwiML Say element URL that Twilio can interpret
+    const encodedText = encodeURIComponent(text || 'Hello');
+    return `https://handler.twilio.com/twiml/EHb2498271264fdbc70f29d9d215a50116?message=${encodedText}`;
   }
 }
 
