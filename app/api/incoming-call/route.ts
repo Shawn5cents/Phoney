@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
-import { generateSpeech, streamToTwilio, voices } from '@/lib/unreal-speech';
+// Import the new premium voice system
+import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -45,9 +46,9 @@ export async function POST(request: Request) {
     
     // Use consistent voice with professional personality settings
     const welcomeAudio = await generateSpeech('Hello?', {
-      PersonalityType: 'PROFESSIONAL',
-      // No need to specify VoiceId, Speed, Pitch - using personality defaults
-      Bitrate: '320k' // Highest quality audio
+      personalityType: 'PROFESSIONAL',
+      gender: 'MALE'
+      // Using personality defaults for all other settings
     });
     
     const audioUrl = await streamToTwilio(welcomeAudio);
@@ -62,9 +63,9 @@ export async function POST(request: Request) {
     
     // Follow up if no response - use same personality for consistency
     const followUpAudio = await generateSpeech('Hello? Anyone there?', {
-      PersonalityType: 'PROFESSIONAL',
+      personalityType: 'PROFESSIONAL',
+      gender: 'MALE'
       // Using same voice throughout the call for natural experience
-      Bitrate: '320k'
     });
     
     // Gather speech after follow-up
@@ -98,8 +99,8 @@ export async function POST(request: Request) {
       const twiml = new VoiceResponse();
       // Generate error message using optimized voice settings
       const errorAudio = await generateSpeech('I apologize, but I encountered a technical issue. Please try your call again.', {
-        PersonalityType: 'PROFESSIONAL', // Maintain same personality as main flow
-        Bitrate: '320k' // Highest quality for clarity
+        personalityType: 'PROFESSIONAL', // Maintain same personality as main flow
+        gender: 'MALE'
       });
       
       // Play the error audio
