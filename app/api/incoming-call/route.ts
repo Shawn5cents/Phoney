@@ -40,58 +40,8 @@ export async function POST(request: Request) {
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
-    console.log('Generating Tre\'s greeting...');
-    // Generate Tre's greeting using Unreal Speech (Jasper's voice)
-    const welcomeAudio = await generateSpeech('Hello, this is Tre, Shawn\'s personal assistant. He asked me to take his calls for him.', {
-      VoiceId: 'Jasper',
-      Speed: 0,
-      Pitch: 0.92,
-      Bitrate: '192k'
-    });
-    
-    // Play the greeting first
-    twiml.play(await streamToTwilio(welcomeAudio));
-
-    // Then start gathering speech
-    const gather = twiml.gather({
-      input: ['speech'],
-      action: '/api/process-speech',
-      method: 'POST',
-      speechTimeout: 'auto',
-      speechModel: 'phone_call',
-      enhanced: true
-    });
-
-    // If no response, say hello again
-    const followUpAudio = await generateSpeech('Hello? This is Tre, Shawn\'s personal assistant. Is anyone there?', {
-      VoiceId: 'Jasper',
-      Speed: 0,
-      Pitch: 0.92,
-      Bitrate: '192k'
-    });
-    
-    twiml.play(await streamToTwilio(followUpAudio));
-    
-    // Try gathering speech again
-    const secondGather = twiml.gather({
-      input: ['speech'],
-      action: '/api/process-speech',
-      method: 'POST',
-      speechTimeout: 'auto',
-      speechModel: 'phone_call',
-      enhanced: true
-    });
-
-    // Generate timeout message using Unreal Speech
-    const timeoutAudio = await generateSpeech('I didn\'t hear anything. Please call back if you need assistance.', {
-      VoiceId: voices.MALE[1], // Using Jasper's voice
-      Speed: 0,
-      Pitch: 0.92,
-      Bitrate: '192k'
-    });
-    
-    // Play the generated audio
-    twiml.play(await streamToTwilio(timeoutAudio));
+    // Simple say for testing
+    twiml.say('Hello, this is Tre. I am answering your call.');
     
     const response = twiml.toString();
     console.log('Generated TwiML:', response);
