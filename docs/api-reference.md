@@ -5,7 +5,7 @@
 ### 📞 Call Management
 
 #### POST `/api/incoming-call`
-Handles incoming phone calls from Twilio. Returns TwiML to gather speech input.
+Handles incoming phone calls from Twilio. Sets up WebSocket streaming and returns TwiML for real-time conversation.
 ```typescript
 POST /api/incoming-call
 Content-Type: application/x-www-form-urlencoded
@@ -17,6 +17,28 @@ Content-Type: application/x-www-form-urlencoded
   "Direction": string,
   // Other Twilio parameters
 }
+```
+
+#### WebSocket `/api/audio-stream`
+Handles real-time audio streaming and speech recognition.
+```typescript
+WebSocket /api/audio-stream?callSid={callSid}
+
+// Incoming messages (binary audio data)
+interface AudioChunk {
+  metadata: {
+    callSid: string;
+    streamSid: string;
+    timestamp: string;
+  };
+  payload: Buffer;
+}
+
+// Events emitted through Pusher
+'speech.detected' - When speech is detected
+'speech.recognized' - When speech is transcribed
+'ai.response.partial' - Streaming AI response chunks
+'ai.response.complete' - Final AI response
 ```
 
 #### POST `/api/process-speech`
@@ -64,49 +86,65 @@ Content-Type: application/json
 ### Channel: `calls`
 Broadcasts events for all calls.
 
-#### `new-call`
+#### `call.started`
 ```typescript
 {
-  callSid: string,
-  from: string,
-  to: string,
-  status: string,
-  timestamp: string
+  callId: string,
+  caller: string,
+  timestamp: string,
+  personality: string
 }
 ```
 
 ### Channel: `call-${callSid}`
 Broadcasts events for a specific call.
 
-#### `speech-received`
+#### `call.initialized`
 ```typescript
 {
-  callSid: string,
-  speechResult: string,
+  status: 'active',
+  wsUrl: string,  // WebSocket connection URL
+  timestamp: string,
+  personality: string
+}
+```
+
+#### `speech.detected`
+```typescript
+{
   confidence: number,
   timestamp: string
 }
 ```
 
-#### `ai-thinking`
+#### `speech.recognized`
 ```typescript
 {
-  callSid: string,
+  text: string,
+  isFinal: boolean,
+  confidence: number,
   timestamp: string
 }
 ```
 
-#### `ai-response-chunk`
+#### `ai.response.partial`
 ```typescript
 {
-  callSid: string,
-  chunk: string,  // Partial AI response
-  isComplete: boolean,
-  timestamp: string
+  text: string,
+  timestamp: string,
+  turnCount: number
 }
 ```
 
-#### `call-completed`
+#### `ai.response.complete`
+```typescript
+{
+  timestamp: string,
+  turnCount: number
+}
+```
+
+#### `call.completed`
 ```typescript
 {
   callSid: string,
@@ -117,22 +155,19 @@ Broadcasts events for a specific call.
 
 ## Models
 
-### AIPersonality
+### AIPersonalityConfig
 ```typescript
-interface AIPersonality {
-  id: string;
-  name: string;          // Display name (e.g., "Professional")
-  description: string;   // Brief description
-  systemPrompt: string;  // Google Gemini system prompt
-  voiceSettings: {      // Google TTS voice settings
-    languageCode: string;
-    name: string;
-    ssmlGender: "NEUTRAL" | "MALE" | "FEMALE";
-  };
-  examples: {           // Example conversations for context
+interface AIPersonalityConfig {
+  name: string;
+  systemPrompt: string;
+  voiceId: SayVoice;  // Twilio voice identifier
+  traits: string[];
+  safetySettings?: SafetySetting[];
+  temperature?: number;
+  examples?: Array<{
     input: string;
     response: string;
-  }[];
+  }>;
 }
 ```
 
@@ -149,6 +184,7 @@ interface Call {
     speaker: "user" | "ai";
     text: string;
     timestamp: string;
+    isFinal?: boolean;
   }[];
   currentAIResponse?: string;
   personality?: string;
@@ -156,44 +192,69 @@ interface Call {
 ```
 
 ### TwiML Components
-The application generates TwiML responses for Twilio:
+The application generates TwiML responses with streaming support:
 
 ```xml
-<!-- Example Gather TwiML -->
+<!-- Example Streaming TwiML -->
 <Response>
-  <Gather input="speech" action="/api/process-speech" method="POST" timeout="10" 
-         speechTimeout="auto" speechModel="phone_call" enhanced="true" 
-         language="en-US" hints="yes, no, maybe, thanks, goodbye, transfer, Shawn">
-    <Say>Hello, how can I help you today?</Say>
+  <Connect>
+    <Stream url="wss://your-domain.com/api/audio-stream?callSid=CAXXXX" track="inbound_track" />
+  </Connect>
+  <Gather input="speech" action="/api/process-speech" method="POST"
+         speechTimeout="auto" speechModel="phone_call" enhanced="true"
+         language="en-US">
+    <Say voice="en-US-Neural2-D">How can I assist you today?</Say>
   </Gather>
-  <Redirect method="POST">/api/no-input</Redirect>
 </Response>
 ```
 
 ## API Dependencies
 
-### Google Gemini API
-Used for generating AI responses based on speech input.
+### Google Speech-to-Text
+Used for real-time speech recognition with streaming support.
 
 ```typescript
-// Example Gemini API integration
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// Example streaming configuration
+const streamingConfig = {
+  config: {
+    encoding: 'MULAW',
+    sampleRateHertz: 8000,
+    languageCode: 'en-US',
+    model: 'phone_call',
+    useEnhanced: true,
+    enableAutomaticPunctuation: true,
+    metadata: {
+      interactionType: 'PHONE_CALL',
+      industryNaicsCodeOfAudio: 518210,
+      originalMediaType: 'AUDIO'
+    }
+  },
+  interimResults: true
+};
+```
 
-// Creating a chat session
-const chat = model.startChat({
-  history: previousMessages,
+### Google Gemini API
+Used for streaming AI responses based on speech input.
+
+```typescript
+// Example Gemini API streaming
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-pro",
   generationConfig: {
     temperature: 0.7,
     topP: 0.8,
     topK: 40,
     maxOutputTokens: 200,
-  },
-  safetySettings: [...]
+  }
 });
 
 // Streaming response
 const result = await chat.sendMessageStream(userMessage);
+for await (const chunk of result.stream) {
+  const chunkText = chunk.text();
+  // Process streaming response
+}
 ```
 
 ### Google Text-to-Speech
@@ -203,7 +264,7 @@ Used for generating natural-sounding voice responses.
 // Example voice settings
 const voiceSettings = {
   languageCode: "en-US",
-  name: "en-US-Studio-O",
+  name: "en-US-Neural2-D",
   ssmlGender: "FEMALE"
 };
 
@@ -215,24 +276,19 @@ const [response] = await textToSpeechClient.synthesizeSpeech({
 });
 ```
 
-### Pusher
-Used for real-time updates to the dashboard.
+### WebSocket Communication
+Used for real-time audio streaming and speech processing.
 
 ```typescript
-// Example Pusher initialization
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID!,
-  key: process.env.PUSHER_KEY!,
-  secret: process.env.PUSHER_SECRET!,
-  cluster: process.env.PUSHER_CLUSTER!,
-});
-
-// Triggering an event
-await pusher.trigger("call-" + callSid, "ai-response-chunk", {
-  callSid,
-  chunk: responseChunk,
-  isComplete: false,
-  timestamp: new Date().toISOString(),
+// Server-side WebSocket handling
+wsServer.on('connection', async (ws, request) => {
+  const url = new URL(request.url!, `http://${request.headers.host}`);
+  const callSid = url.searchParams.get('callSid');
+  
+  ws.on('message', async (data) => {
+    const chunk = JSON.parse(data.toString());
+    // Process audio chunk
+  });
 });
 ```
 
@@ -242,3 +298,5 @@ await pusher.trigger("call-" + callSid, "ai-response-chunk", {
 - Validate incoming Twilio webhooks using signature validation
 - Use Pusher's private channels for sensitive call data
 - Implement proper error handling to avoid exposing system details
+- Secure WebSocket connections with proper authentication
+- Rate limit audio stream processing to prevent abuse
