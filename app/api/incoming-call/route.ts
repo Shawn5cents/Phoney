@@ -4,16 +4,18 @@ import twilio from 'twilio';
 import { personalityStore } from '@/lib/personality-store';
 import { headers } from 'next/headers';
 import { GoogleTTSVoice } from '@/types/voice-types';
+import { getTwilioVoiceConfig, getVoiceConfigFromPersonality } from '@/lib/voice-processing';
 
 const { VoiceResponse } = twilio.twiml;
 
-// Amazon Connect configuration
-const AMAZON_CONNECT_CONFIG = {
-  // Replace with your actual Amazon Connect instance details
-  instanceId: process.env.AMAZON_CONNECT_INSTANCE_ID || 'your-instance-id',
-  contactFlowId: process.env.AMAZON_CONNECT_FLOW_ID || 'your-contact-flow-id',
-  // This should be the phone number or SIP endpoint for your Amazon Connect instance
-  connectEndpoint: process.env.AMAZON_CONNECT_ENDPOINT || '+15551234567'
+// Advanced voice processing configuration
+const VOICE_PROCESSING_CONFIG = {
+  // Speech timeout in seconds
+  speechTimeout: 'auto',
+  // Maximum recording length in seconds
+  maxRecordingLength: 60,
+  // Default language code
+  defaultLanguage: 'en-US'
 };
 
 // Natural greeting variations
@@ -76,33 +78,36 @@ export async function POST(request: Request) {
     // Get current personality for metadata tracking
     const currentPersonality = personalityStore.getCurrentPersonality();
 
-    // Create a welcome message before forwarding
-    twiml.say(
-      { voice: 'Polly.Matthew' },
-      'Welcome to Phoney. Please hold while we connect you to our advanced voice system.'
-    );
+    // Get voice configuration for the current personality
+    const voiceConfig = getTwilioVoiceConfig(getVoiceConfigFromPersonality(currentPersonality));
     
-    // Forward the call to Amazon Connect using SIP or regular phone number
-    // Option A: SIP Trunking (uncomment if using SIP)
-    // const sip = twiml.dial().sip(`sip:${AMAZON_CONNECT_CONFIG.instanceId}@your-sip-domain.com`);
-    // sip.parameter({ name: 'callerId', value: callerNumber });
-    // sip.parameter({ name: 'personalityId', value: currentPersonality.name });
+    // Create a personalized welcome message
+    const welcomeMessage = getRandomGreeting();
     
-    // Option B: Simple Call Forwarding (using regular phone number)
-    const dial = twiml.dial({
-      callerId: callerNumber, // Pass the original caller ID
-      // You can add additional parameters as needed
-      // answerOnBridge: true // Uncomment to maintain call quality during transfer
+    // Add the welcome message with the appropriate voice
+    twiml.say(voiceConfig, welcomeMessage);
+    
+    // Set up gathering speech input from the caller
+    const gather = twiml.gather({
+      input: ['speech'],  // Twilio expects an array of input types
+      action: `/api/process-speech?callSid=${callSid}&personalityId=${currentPersonality.name}`,
+      speechTimeout: VOICE_PROCESSING_CONFIG.speechTimeout,
+      language: 'en-US'
     });
-    dial.number(AMAZON_CONNECT_CONFIG.connectEndpoint);
+    
+    // If no input is detected, handle with no-input route
+    // Use the redirect method from Twilio's VoiceResponse
+    const redirectUrl = `/api/no-input?callSid=${callSid}&personalityId=${currentPersonality.name}`;
+    twiml.say(voiceConfig, "I didn't hear anything. Let me know how I can help you.");
+    gather.say(voiceConfig, "Please speak now.");
 
     // Initialize call in Pusher for dashboard tracking
     await pusherServer.trigger('calls', 'call-started', {
       callSid,
       callerNumber,
       timestamp,
-      status: 'forwarded-to-connect',
-      forwardedTo: AMAZON_CONNECT_CONFIG.connectEndpoint
+      status: 'in-progress',
+      personality: currentPersonality.name
     });
     
     // Set initial personality (for dashboard)
@@ -114,9 +119,9 @@ export async function POST(request: Request) {
     // Set initial call status
     await pusherServer.trigger(`call-${callSid}`, 'call-updated', {
       timestamp,
-      status: 'forwarded',
+      status: 'in-progress',
       callerNumber,
-      forwardedTo: 'Amazon Connect'
+      activePersonality: currentPersonality.name
     });
 
     // Return TwiML response with forwarding instructions
