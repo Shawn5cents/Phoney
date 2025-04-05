@@ -1,36 +1,14 @@
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
-// Import the new premium voice system
-import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
-// Import initialization to ensure speech cache is ready
-import { ensureInitialized } from '../_init';
 
 const { VoiceResponse } = twilio.twiml;
 
-// Keep track of call state
-const activeCallsMap = new Map<string, boolean>();
-
-// Last updated: 2025-04-03 14:27
+// Last updated: 2025-04-04 23:56
 export async function POST(request: Request) {
   console.log('=== START INCOMING CALL HANDLER ===');
   console.log(`Timestamp: ${new Date().toISOString()}`);
-  console.log(`Node Version: ${process.version}`);
-  console.log(`Memory Usage: ${JSON.stringify(process.memoryUsage())}`);
-  console.log('Environment check:', {
-    hasGoogleKey: !!process.env.GOOGLE_API_KEY,
-    googleKeyLength: process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.length : 0,
-    hasTwilioSid: !!process.env.TWILIO_ACCOUNT_SID,
-  });
-  
-  // Ensure speech cache is initialized
-  try {
-    await ensureInitialized();
-    console.log('Speech cache ready for use');
-  } catch (initError) {
-    console.warn('Speech cache initialization may not be complete:', initError);
-    // Continue anyway as we have fallbacks
-  }
+  console.log('SIMPLIFIED VERSION FOR DEBUGGING');
   
   try {
     console.log('Parsing incoming call data...');
@@ -60,36 +38,32 @@ export async function POST(request: Request) {
       // Continue with call even if notification fails
     }
     
-    console.log('Creating TwiML response...');
+    console.log('Creating ULTRA SIMPLE TwiML response...');
     const twiml = new VoiceResponse();
     
-    // SIMPLIFIED APPROACH: Use basic TTS for reliability
+    // Start with a simple say verb
+    twiml.say('Hello, this is Phoney Assistant.');
+    
+    // Add a pause
+    twiml.pause({ length: 1 });
+    
+    // Now gather the speech
     const gather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
-      timeout: 10,
-      speechTimeout: 'auto',
-      speechModel: 'phone_call',
-      enhanced: true,
-      language: 'en-US'
+      timeout: 5
     });
     
-    // Use simple TTS for greeting
-    gather.say({
-      voice: 'man',
-      language: 'en-US'
-    }, 'Hello, this is Phoney Assistant. How can I help you today?');
+    // Add a prompt within the gather
+    gather.say('How can I help you today?');
     
-    // Handle no input
-    twiml.say({
-      voice: 'man',
-      language: 'en-US'
-    }, 'I didn\'t hear anything. Please call back when you\'re ready to talk.');
+    // Add a fallback for no input
+    twiml.say('I didn\'t hear anything. Goodbye.');
     
-    // Log the TwiML we're sending
+    // Convert to string and log
     const response = twiml.toString();
-    console.log('Generated TwiML:', response);
+    console.log('ULTRA SIMPLE TwiML:', response);
 
 
     return new NextResponse(response, {
