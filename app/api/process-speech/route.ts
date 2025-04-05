@@ -40,13 +40,20 @@ export async function POST(request: Request) {
       throw new Error('No speech result received');
     }
 
-    // Use simplified prompt for now while debugging the call flow
-    const prompt = `Respond as Michael, a human assistant who handles calls for Shawn.
-Be brief, casual but professional. Keep responses under 20 words.
-Never say you're AI. If asked about Shawn, say he's not available.
+    // Create a more appropriate AI prompt based on speech content
+    // This incorporates personality info from the AI personalities system
+    const prompt = `You are Michael, a human assistant who handles calls for Shawn. You have a friendly, professional tone.
 
-User: ${speechResult}
-Assistant:`;
+GUIDELINES:
+- Be brief and natural. Keep responses under 20 words like a real person would.
+- Never say you're an AI. Simply identify as Shawn's assistant Michael.
+- If asked about Shawn, explain he's not available but you're handling his calls.
+- For transfers, get their callback number or take a message.
+- Respond directly to exactly what was said - stay on topic.
+
+User said: "${speechResult}"
+
+Your response (brief and natural):`;
     
     console.log('Prompt:', prompt);
     console.log('Getting AI response...');
@@ -103,28 +110,39 @@ Assistant:`;
     
     console.log('AI response:', aiResponse);
     
-    // Just use basic Twilio TTS for reliability while debugging
+    // Basic Twilio TTS with natural settings
     twiml.say({
-      voice: 'man',
-      language: 'en-US'
-    }, aiResponse || 'I apologize, but I encountered an error. Please try again.');
+      voice: 'man',         // Male voice
+      language: 'en-US'     // US English
+    }, aiResponse || 'I apologize, but I didn\'t catch that clearly. How can I help you today?');
     
     // Add another pause
     twiml.pause({ length: 1 });
     
-    // Set up next speech gathering - CRITICAL for keeping call alive
+    // Set up next speech gathering - CRITICAL for keeping the call alive
     const nextGather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
-      timeout: 8,  // Wait for user to speak
+      timeout: 10,           // Give enough time for user to speak
+      speechTimeout: 'auto', // Auto-detect end of speech
+      speechModel: 'phone_call', // Optimized for phone calls
+      enhanced: true,        // Better recognition
+      language: 'en-US',     // Language setting
+      hints: 'yes, no, maybe, thanks, goodbye, transfer, Shawn' // Recognition hints
     });
     
-    // Add a simple prompt to gather more input
-    nextGather.say('Anything else I can help with?');
+    // Add a natural-sounding follow-up prompt
+    nextGather.say({
+      voice: 'man',
+      language: 'en-US'
+    }, 'Anything else I can help you with today?');
     
-    // Add a fallback if no input
-    twiml.say('Thank you for calling. Goodbye.');
+    // Add a polite fallback message if no further input is received
+    twiml.say({
+      voice: 'man',
+      language: 'en-US'
+    }, 'Thank you for calling Phoney Assistant. Have a great day. Goodbye.');
     
     // Log this call to ensure it's being processed
     console.log(`Processing speech for call ${callSid} complete. Waiting for next input.`);

@@ -41,27 +41,26 @@ export async function POST(request: Request) {
     console.log('Creating ULTRA SIMPLE TwiML response...');
     const twiml = new VoiceResponse();
     
-    // Start with a simple say verb
-    twiml.say('Hello, this is Phoney Assistant.');
-    
-    // Add a pause
-    twiml.pause({ length: 1 });
-    
-    // Now gather the speech with enhanced recognition settings
+    // IMPROVED APPROACH: Make gather the top-level verb
+    // Speech recognition works better when the gather is the top-level verb
     const gather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
-      timeout: 10,
-      speechTimeout: 'auto',
-      speechModel: 'phone_call',
-      enhanced: true,
-      profanityFilter: false,
-      language: 'en-US'
+      timeout: 15,              // Give more time to start speaking
+      speechTimeout: 'auto',    // Auto-detect end of speech
+      speechModel: 'phone_call',// Phone-optimized model
+      enhanced: true,          // Better recognition quality
+      profanityFilter: false,   // Capture everything
+      language: 'en-US',       // Specify language
+      hints: 'hello, hi, yes, no, help, Shawn' // Common words to help recognition
     });
     
-    // Add a prompt within the gather
-    gather.say('How can I help you today?');
+    // Put greeting inside the gather
+    gather.say({
+      voice: 'man',
+      language: 'en-US'
+    }, 'Hello, this is Phoney Assistant. How can I help you today?');
     
     // Add a fallback for no input
     twiml.say('I didn\'t hear anything. Goodbye.');
