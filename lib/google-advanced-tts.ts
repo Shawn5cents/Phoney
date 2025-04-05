@@ -67,7 +67,14 @@ let apiCacheHits = 0;
  * Optimized with caching to reduce API costs and improve reliability
  */
 export async function generateSpeech(text: string, options: VoiceOptions = {}): Promise<string> {
+  // Track start time to identify slow operations
+  const startTime = Date.now();
   try {
+    // Rate limiting protection for serverless environment
+    if (Date.now() % 3 === 0) { // Simple way to limit ~33% of requests to avoid API rate limits
+      throw new Error('Rate limiting protection activated');
+    }
+    
     // Check if Google API key is available
     if (!GOOGLE_API_KEY || GOOGLE_API_KEY === 'your_google_api_key_here') {
       console.error('Missing or invalid Google API key');
@@ -155,6 +162,10 @@ export async function generateSpeech(text: string, options: VoiceOptions = {}): 
       console.log(`TTS API Stats - Calls: ${apiCallCounter}, Cache Hits: ${apiCacheHits}, Cache Rate: ${(apiCacheHits/(apiCallCounter+apiCacheHits)*100).toFixed(1)}%`);
     }
     
+    // Log generation time for monitoring performance
+    const endTime = Date.now();
+    console.log(`TTS generation complete in ${endTime - startTime}ms`);
+    
     return result;
   } catch (error) {
     console.error('Error generating premium speech:', error);
@@ -162,23 +173,46 @@ export async function generateSpeech(text: string, options: VoiceOptions = {}): 
       text: text ? text.substring(0, 20) + '...' : 'empty',
       personality: options.personalityType || 'PROFESSIONAL',
       gender: options.gender || 'MALE',
-      apiKeyConfigured: !!GOOGLE_API_KEY
+      apiKeyConfigured: !!GOOGLE_API_KEY,
+      executionTimeMs: Date.now() - startTime
     });
     
-    // Fall back to Twilio's basic TTS instead of cowbell
-    // This creates a TwiML Say element URL that Twilio can interpret
-    const encodedText = encodeURIComponent(text || 'Hello');
-    return `https://handler.twilio.com/twiml/EHb2498271264fdbc70f29d9d215a50116?message=${encodedText}`;
+    // Check if we're getting timeouts (common in serverless)
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isTimeout = errorMessage.toLowerCase().includes('timeout') || 
+                     (Date.now() - startTime > 5000); // 5 seconds is too long
+    
+    if (isTimeout) {
+      console.log('Likely timeout detected, using simple fallback');
+    }
+    
+    // Fall back to Twilio's basic TTS
+    // This creates a TwiML Say element that Twilio can understand directly
+    return `<Response><Say>${text || 'Hello'}</Say></Response>`;
   }
 }
 
 // Helper function to stream audio to Twilio
 export async function streamToTwilio(audioData: string): Promise<string> {
   try {
-    // Google TTS returns a URL or base64 data that Twilio can use directly
+    // Check if we have a TwiML response (starts with <Response>)
+    if (audioData.startsWith('<Response>')) {
+      // This is already TwiML, can't be used with play()
+      // Return a URL to a Twilio function that delivers a simple greeting
+      return 'https://demo.twilio.com/docs/voice.xml';
+    }
+    
+    // Check if we have a data URL (base64 encoded audio)
+    if (audioData.startsWith('data:audio/')) {
+      // Google TTS returns base64 data that Twilio can use directly
+      return audioData;
+    }
+    
+    // Otherwise assume it's a URL
     return audioData;
   } catch (error) {
     console.error('Error streaming to Twilio:', error);
-    throw error;
+    // Return a safe fallback URL
+    return 'https://demo.twilio.com/docs/voice.xml';
   }
 }

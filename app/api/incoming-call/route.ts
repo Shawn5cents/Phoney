@@ -75,6 +75,19 @@ export async function POST(request: Request) {
       console.log('generateSpeech completed successfully');
       console.log('Audio URL type:', typeof welcomeAudio, 'Length:', welcomeAudio.length);
       console.log('Audio URL preview:', welcomeAudio.substring(0, 50) + '...');
+      
+      // Check if we got a TwiML response directly
+      if (welcomeAudio.startsWith('<Response>')) {
+        console.log('Received direct TwiML response, returning it');
+        return new NextResponse(welcomeAudio, {
+          headers: { 
+            'Content-Type': 'text/xml; charset=utf-8',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+        });
+      }
     
       const audioUrl = await streamToTwilio(welcomeAudio);
       console.log('=== AUDIO URL DETAILS ===');
@@ -131,14 +144,10 @@ export async function POST(request: Request) {
     
     try {
       const twiml = new VoiceResponse();
-      // Generate error message using optimized voice settings
-      const errorAudio = await generateSpeech('I apologize, but I encountered a technical issue. Please try your call again.', {
-        personalityType: 'PROFESSIONAL', // Maintain same personality as main flow
-        gender: 'MALE'
-      });
       
-      // Play the error audio
-      twiml.play(await streamToTwilio(errorAudio));
+      // Skip trying to use advanced TTS in error handler to avoid recursion
+      // Just use Twilio's built-in TTS which is more reliable
+      twiml.say('I apologize, but I encountered a technical issue. Please try your call again.');
       
       return new NextResponse(twiml.toString(), {
         headers: { 'Content-Type': 'text/xml; charset=utf-8' },

@@ -100,14 +100,32 @@ Assistant:`;
       process.env.DEFAULT_TRANSFER_NUMBER = '334-352-9695';
     }
 
-    // Generate response using Google's premium voice
-    const responseAudio = await generateSpeech(aiResponse!, {
-      personalityType: 'FRIENDLY',
-      gender: 'MALE'
-    });
-    
-    // Play the generated audio
-    twiml.play(await streamToTwilio(responseAudio));
+    try {
+      // Generate response using Google's premium voice
+      console.log('Generating TTS response for:', aiResponse);
+      const responseAudio = await generateSpeech(aiResponse!, {
+        personalityType: 'FRIENDLY',
+        gender: 'MALE'
+      });
+      
+      // Check if we got a TwiML response (starts with <Response>)
+      if (responseAudio.startsWith('<Response>')) {
+        // If we got TwiML directly, return it instead of embedding it
+        console.log('Received TwiML response directly, using it');
+        return new NextResponse(responseAudio, {
+          headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+        });
+      }
+      
+      // Otherwise, play the generated audio
+      console.log('Processing audio through streamToTwilio');
+      const playableAudio = await streamToTwilio(responseAudio);
+      twiml.play(playableAudio);
+    } catch (ttsError) {
+      console.error('Error with TTS, falling back to basic Say:', ttsError);
+      // Fall back to basic Twilio TTS
+      twiml.say(aiResponse || 'I apologize, but I encountered an error. Please try again.');
+    }
     
     // Add another pause
     twiml.pause({ length: 1 });

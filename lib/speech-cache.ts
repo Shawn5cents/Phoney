@@ -1,19 +1,27 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { mkdir } from 'fs/promises';
 
-// Define the cache directory
-const CACHE_DIR = path.join(process.cwd(), '.cache', 'speech');
+// Use in-memory cache for compatibility with serverless environments like Vercel
+// This is more reliable than filesystem caching for serverless deployments
+const memoryCache: Map<string, { data: string, timestamp: number }> = new Map();
 
-// Ensure cache directory exists
-const ensureCacheDir = async () => {
-  try {
-    await mkdir(CACHE_DIR, { recursive: true });
-    return true;
-  } catch (error) {
-    console.error('Failed to create cache directory:', error);
-    return false;
+// Check if running in production (Vercel) or development
+const isProduction = process.env.NODE_ENV === 'production';
+const MAX_CACHE_SIZE = 100; // Maximum number of items to keep in memory
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+// Function to manage cache size
+const pruneCache = () => {
+  if (memoryCache.size <= MAX_CACHE_SIZE) return;
+  
+  // Find the oldest entries to remove
+  const entries = Array.from(memoryCache.entries());
+  entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+  
+  // Remove oldest entries until we're under the limit
+  const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE);
+  for (const [key] of toRemove) {
+    memoryCache.delete(key);
+    console.log(`Pruned cache entry: ${key}`);
   }
 };
 
@@ -28,23 +36,17 @@ export function generateCacheKey(text: string, options: any): string {
 // Check if a cached item exists
 export async function getCachedSpeech(cacheKey: string): Promise<string | null> {
   try {
-    await ensureCacheDir();
-    const cachePath = path.join(CACHE_DIR, `${cacheKey}.txt`);
-    
-    if (fs.existsSync(cachePath)) {
-      // Check if the file was created within the last 7 days
-      const stats = fs.statSync(cachePath);
-      const fileAge = Date.now() - stats.mtimeMs;
-      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-      
-      if (fileAge < maxAge) {
+    // Check memory cache
+    const cached = memoryCache.get(cacheKey);
+    if (cached) {
+      // Check if the cache is still valid
+      const age = Date.now() - cached.timestamp;
+      if (age < CACHE_TTL) {
         console.log(`Cache hit for speech: ${cacheKey}`);
-        return fs.readFileSync(cachePath, 'utf8');
+        return cached.data;
       } else {
         console.log(`Cache expired for speech: ${cacheKey}`);
-        // Delete expired cache
-        fs.unlinkSync(cachePath);
-        return null;
+        memoryCache.delete(cacheKey);
       }
     }
     return null;
@@ -57,9 +59,15 @@ export async function getCachedSpeech(cacheKey: string): Promise<string | null> 
 // Save speech audio to cache
 export async function cacheSpeech(cacheKey: string, audioData: string): Promise<boolean> {
   try {
-    await ensureCacheDir();
-    const cachePath = path.join(CACHE_DIR, `${cacheKey}.txt`);
-    fs.writeFileSync(cachePath, audioData);
+    // Add to memory cache
+    memoryCache.set(cacheKey, {
+      data: audioData,
+      timestamp: Date.now()
+    });
+    
+    // Prune cache if it gets too large
+    pruneCache();
+    
     console.log(`Cached speech: ${cacheKey}`);
     return true;
   } catch (error) {
@@ -71,25 +79,19 @@ export async function cacheSpeech(cacheKey: string, audioData: string): Promise<
 // Initialize cache and clean up old entries
 export async function initSpeechCache(): Promise<void> {
   try {
-    await ensureCacheDir();
-    
-    // Clean up cache entries older than 7 days
-    const files = fs.readdirSync(CACHE_DIR);
+    // Clear out any stale entries in the memory cache
     const now = Date.now();
-    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    let expiredCount = 0;
     
-    for (const file of files) {
-      const filePath = path.join(CACHE_DIR, file);
-      const stats = fs.statSync(filePath);
-      const fileAge = now - stats.mtimeMs;
-      
-      if (fileAge > maxAge) {
-        fs.unlinkSync(filePath);
-        console.log(`Removed expired cache: ${file}`);
+    // Use Array.from to avoid TypeScript iterator compatibility issues
+    Array.from(memoryCache.entries()).forEach(([key, value]) => {
+      if (now - value.timestamp > CACHE_TTL) {
+        memoryCache.delete(key);
+        expiredCount++;
       }
-    }
+    })
     
-    console.log(`Speech cache initialized with ${files.length} entries`);
+    console.log(`Speech cache initialized. Cleared ${expiredCount} expired entries. Current cache size: ${memoryCache.size}`);
   } catch (error) {
     console.error('Failed to initialize speech cache:', error);
   }
