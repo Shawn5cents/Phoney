@@ -126,21 +126,74 @@ npm run dev
       <td>
         • Next.js API Routes<br>
         • Twilio SDK<br>
-        • Pusher Channels
+        • Pusher Channels<br>
+        • Amazon Connect
       </td>
       <td>
         • Google Gemini Pro<br>
         • Google Cloud TTS<br>
-        • Speech Recognition
+        • Speech Recognition<br>
+        • Amazon Connect AI
       </td>
       <td>
         • Railway<br>
         • WebSockets<br>
-        • Real-time Updates
+        • Real-time Updates<br>
+        • Hybrid Voice System
       </td>
     </tr>
   </table>
 </div>
+
+## 🔄 Hybrid Voice System
+
+<div align="center">
+  <img src="docs/assets/images/hybrid-approach.svg" alt="Hybrid Voice System" width="600"/>
+</div>
+
+Phoney now supports a hybrid approach that combines Twilio's phone number management with Amazon Connect's advanced voice processing capabilities:
+
+### How It Works
+
+1. **Incoming Calls**: Calls come in through your existing Twilio phone numbers
+2. **Call Forwarding**: Twilio forwards calls to Amazon Connect using either:
+   - **SIP Trunking**: Digital connection for higher quality
+   - **Simple Forwarding**: Standard call transfer to Amazon Connect
+3. **Voice Processing**: Amazon Connect handles the conversation with superior voice quality
+4. **Dashboard Integration**: The Phoney dashboard still shows real-time call information
+
+### Benefits
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">🔢 <b>Keep Your Numbers</b></td>
+      <td align="center">🔊 <b>Better Voice Quality</b></td>
+      <td align="center">🧠 <b>Advanced AI</b></td>
+      <td align="center">💰 <b>Cost Efficient</b></td>
+    </tr>
+    <tr>
+      <td>Continue using your existing Twilio phone numbers</td>
+      <td>Leverage Amazon Connect's superior voice processing</td>
+      <td>Access Amazon's advanced conversation AI</td>
+      <td>Optimize costs while improving quality</td>
+    </tr>
+  </table>
+</div>
+
+### Configuration
+
+To set up the hybrid approach, configure these environment variables:
+
+```env
+# Amazon Connect Configuration
+AMAZON_CONNECT_INSTANCE_ID=your_amazon_connect_instance_id
+AMAZON_CONNECT_FLOW_ID=your_amazon_connect_contact_flow_id
+AMAZON_CONNECT_ENDPOINT=your_amazon_connect_phone_number
+AMAZON_CONNECT_REGION=us-east-1
+AMAZON_CONNECT_SIP_DOMAIN=your_amazon_connect_sip_domain
+AMAZON_CONNECT_USE_SIP=false
+```
 
 ## 📚 Documentation
 

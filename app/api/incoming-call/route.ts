@@ -3,17 +3,17 @@ import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
 import { personalityStore } from '@/lib/personality-store';
 import { headers } from 'next/headers';
-import { generateSpeech } from '@/lib/google-advanced-tts';
 import { GoogleTTSVoice } from '@/types/voice-types';
 
 const { VoiceResponse } = twilio.twiml;
 
-// Configure high-quality voices for different personalities using most natural-sounding Studio voices
-const VOICE_CONFIG: Record<string, GoogleTTSVoice> = {
-  professional: { languageCode: 'en-US', name: 'en-US-Studio-O', ssmlGender: 'FEMALE' }, // Warm, confident female voice
-  friendly: { languageCode: 'en-US', name: 'en-US-Studio-M', ssmlGender: 'MALE' },   // Natural, casual male voice
-  witty: { languageCode: 'en-US', name: 'en-US-Studio-D', ssmlGender: 'MALE' },      // Energetic male voice
-  zen: { languageCode: 'en-US', name: 'en-US-Studio-F', ssmlGender: 'FEMALE' }        // Calm, soothing female voice
+// Amazon Connect configuration
+const AMAZON_CONNECT_CONFIG = {
+  // Replace with your actual Amazon Connect instance details
+  instanceId: process.env.AMAZON_CONNECT_INSTANCE_ID || 'your-instance-id',
+  contactFlowId: process.env.AMAZON_CONNECT_FLOW_ID || 'your-contact-flow-id',
+  // This should be the phone number or SIP endpoint for your Amazon Connect instance
+  connectEndpoint: process.env.AMAZON_CONNECT_ENDPOINT || '+15551234567'
 };
 
 // Natural greeting variations
@@ -73,42 +73,39 @@ export async function POST(request: Request) {
     
     console.log('Call from:', callerNumber, 'SID:', callSid);
 
-    // Get current personality and voice configuration
+    // Get current personality for metadata tracking
     const currentPersonality = personalityStore.getCurrentPersonality();
-    const voiceConfig = VOICE_CONFIG[currentPersonality.name.toLowerCase()];
 
-    // Generate a natural-sounding welcome message
-    const welcomeMessage = getRandomGreeting();
+    // Create a welcome message before forwarding
+    twiml.say(
+      { voice: 'Polly.Matthew' },
+      'Welcome to Phoney. Please hold while we connect you to our advanced voice system.'
+    );
     
-    // Create SSML for more natural speech with slight pauses and intonation
-    const ssml = `<speak>
-      <prosody rate="95%" pitch="+0.5st">${welcomeMessage}</prosody>
-    </speak>`;
+    // Forward the call to Amazon Connect using SIP or regular phone number
+    // Option A: SIP Trunking (uncomment if using SIP)
+    // const sip = twiml.dial().sip(`sip:${AMAZON_CONNECT_CONFIG.instanceId}@your-sip-domain.com`);
+    // sip.parameter({ name: 'callerId', value: callerNumber });
+    // sip.parameter({ name: 'personalityId', value: currentPersonality.name });
     
-    // Generate audio content with enhanced natural speech
-    const audioContent = await generateSpeech(ssml, voiceConfig);
-    const audioUrl = `data:audio/mp3;base64,${audioContent.toString('base64')}`;
-    
-    // Set up continuous conversation
-    const gather = twiml.gather({
-      input: ['speech'],
-      action: '/api/conversation',
-      method: 'POST',
-      speechTimeout: 'auto',
-      enhanced: true
+    // Option B: Simple Call Forwarding (using regular phone number)
+    const dial = twiml.dial({
+      callerId: callerNumber, // Pass the original caller ID
+      // You can add additional parameters as needed
+      // answerOnBridge: true // Uncomment to maintain call quality during transfer
     });
-    
-    // Play the generated audio using TwiML
-    gather.say({}, welcomeMessage);
+    dial.number(AMAZON_CONNECT_CONFIG.connectEndpoint);
 
-    // Initialize call in Pusher
+    // Initialize call in Pusher for dashboard tracking
     await pusherServer.trigger('calls', 'call-started', {
       callSid,
       callerNumber,
       timestamp,
-      status: 'active'
+      status: 'forwarded-to-connect',
+      forwardedTo: AMAZON_CONNECT_CONFIG.connectEndpoint
     });
-    // Set initial personality
+    
+    // Set initial personality (for dashboard)
     await pusherServer.trigger(`call-${callSid}`, 'personality-changed', {
       timestamp,
       personality: currentPersonality
@@ -117,11 +114,12 @@ export async function POST(request: Request) {
     // Set initial call status
     await pusherServer.trigger(`call-${callSid}`, 'call-updated', {
       timestamp,
-      status: 'active',
-      callerNumber
+      status: 'forwarded',
+      callerNumber,
+      forwardedTo: 'Amazon Connect'
     });
 
-    // Return TwiML response
+    // Return TwiML response with forwarding instructions
     return createTwiMLResponse(twiml.toString());
 
   } catch (error) {
