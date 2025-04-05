@@ -32,6 +32,7 @@
   "devDependencies": {
     "@tailwindcss/language-server": "^0.14.13",
     "@types/node": "^22.14.0",
+    "@types/twilio": "^3.19.2",
     "@types/ws": "^8.18.1",
     "bufferutil": "^4.0.9",
     "sharp": "^0.33.5",

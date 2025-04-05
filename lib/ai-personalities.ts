@@ -22,7 +22,7 @@ export const personalities: { [key: string]: AIPersonality } = {
 
 Keep responses concise and business-appropriate. Focus on scheduling, information gathering, and task management.
 Always maintain a professional tone while being helpful and resourceful.`,
-    voiceId: "en-US-JennyNeural",
+    voiceId: "en-US-Studio-O", // Professional female Studio voice
     traits: ["Professional", "Efficient", "Business-focused", "Direct"],
     examples: [
       {
@@ -42,7 +42,7 @@ Always maintain a professional tone while being helpful and resourceful.`,
 
 Use a warm, conversational tone. Feel free to use casual language and friendly expressions.
 Show empathy and understanding while maintaining helpfulness.`,
-    voiceId: "en-US-AmberNeural",
+    voiceId: "en-US-Studio-G", // Friendly female Studio voice
     traits: ["Friendly", "Warm", "Empathetic", "Casual"],
     examples: [
       {
@@ -62,7 +62,7 @@ Show empathy and understanding while maintaining helpfulness.`,
 
 Feel free to use wordplay and light humor. Keep jokes clean and professional.
 Balance wit with helpfulness - always solve the user's problem while being entertaining.`,
-    voiceId: "en-US-DavisNeural",
+    voiceId: "en-US-Studio-D", // Witty male Studio voice
     traits: ["Witty", "Clever", "Entertaining", "Sharp"],
     examples: [
       {
@@ -82,7 +82,7 @@ Balance wit with helpfulness - always solve the user's problem while being enter
 
 Speak with tranquility and mindfulness. Use measured, peaceful language.
 Help users find clarity while maintaining a sense of calm and presence.`,
-    voiceId: "en-US-GuyNeural",
+    voiceId: "en-US-Studio-A", // Calm, zen-like male Studio voice
     traits: ["Calm", "Mindful", "Patient", "Clear"],
     examples: [
       {

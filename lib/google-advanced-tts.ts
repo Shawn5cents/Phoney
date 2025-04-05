@@ -63,26 +63,38 @@ export async function streamToTwilio(audioBuffer: Buffer): Promise<string> {
   return `data:audio/mp3;base64,${audioBuffer.toString('base64')}`;
 }
 
+// Export voice IDs for use in other files
+export const VOICE_IDS = {
+  PROFESSIONAL_FEMALE: 'en-US-Studio-O',  // Warm, confident female voice
+  PROFESSIONAL_MALE: 'en-US-Studio-M',    // Professional male voice
+  FRIENDLY_FEMALE: 'en-US-Studio-G',      // Friendly, warm female voice
+  FRIENDLY_MALE: 'en-US-Studio-J',        // Friendly, casual male voice
+  WITTY_MALE: 'en-US-Studio-D',           // Energetic male voice
+  WITTY_FEMALE: 'en-US-Studio-C',         // Energetic female voice
+  ZEN_FEMALE: 'en-US-Studio-F',           // Calm, soothing female voice
+  ZEN_MALE: 'en-US-Studio-A'              // Calm, soothing male voice
+};
+
 export function getVoiceOptions(personality: string = 'casual'): VoiceConfig {
   const voices = {
     casual: {
       languageCode: 'en-US',
-      name: 'en-US-Studio-O',
+      name: VOICE_IDS.FRIENDLY_FEMALE,
       ssmlGender: 'FEMALE' as const
     },
     professional: {
       languageCode: 'en-US',
-      name: 'en-US-Studio-M',
+      name: VOICE_IDS.PROFESSIONAL_MALE,
       ssmlGender: 'MALE' as const
     },
     friendly: {
       languageCode: 'en-US',
-      name: 'en-US-Studio-G',
+      name: VOICE_IDS.FRIENDLY_FEMALE,
       ssmlGender: 'FEMALE' as const
     },
     expert: {
       languageCode: 'en-US',
-      name: 'en-US-Studio-D',
+      name: VOICE_IDS.WITTY_MALE,
       ssmlGender: 'MALE' as const
     }
   };

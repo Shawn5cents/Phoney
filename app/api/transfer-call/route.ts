@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
-import twilio from 'twilio';
+import { Twilio } from 'twilio';
+import { twiml } from 'twilio';
 import { pusherServer } from '@/lib/pusher';
 import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
 
-const client = twilio(process.env.TWILIO_API_KEY_SID, process.env.TWILIO_API_KEY_SECRET, {
-  accountSid: process.env.TWILIO_ACCOUNT_SID
-});
+// Properly initialize Twilio client
+const accountSid = process.env.TWILIO_ACCOUNT_SID!;
+const authToken = process.env.TWILIO_AUTH_TOKEN!;
+const client = new Twilio(accountSid, authToken);
 
 export async function POST(request: Request) {
   const { callSid, transferNumber: requestedNumber } = await request.json();
@@ -16,24 +18,25 @@ export async function POST(request: Request) {
     console.log(`Transferring call ${callSid} to ${transferNumber}`);
     
     // Create TwiML to transfer the call
-    const twiml = new twilio.twiml.VoiceResponse();
+    const VoiceResponse = twiml.VoiceResponse;
+    const twimlResponse = new VoiceResponse();
     
-    // Generate transfer message using Google's premium voice
-    const transferAudio = await generateSpeech('Please hold while I transfer you.', {
-      personalityType: 'PROFESSIONAL',
-      gender: 'MALE'
-    });
-    
-    // Play the generated audio
-    twiml.play(await streamToTwilio(transferAudio));
+    // Add a message using standard TwiML say verb
+    // Note: We're using a standard voice here as TwiML doesn't directly support Google Studio voices
+    // The actual voice quality will be determined by Twilio's implementation
+    twimlResponse.say(
+      { voice: 'Polly.Matthew' }, // Using Twilio's Polly voice for better quality
+      'Please hold while I transfer you.'
+    );
     
     // Dial the transfer number
-    twiml.dial().number(transferNumber);
+    const dialElement = twimlResponse.dial();
+    dialElement.number(transferNumber);
     
     // Update the call with the new TwiML
     await client.calls(callSid)
       .update({
-        twiml: twiml.toString()
+        twiml: twimlResponse.toString()
       });
     
     // Notify about the transfer

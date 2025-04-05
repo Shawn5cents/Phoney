@@ -35,11 +35,11 @@ export async function POST(request: Request) {
       currentPersonality
     );
 
-    // Generate speech from response
+    // Generate speech from response using Studio voices
     const audioBuffer = await generateSpeech(response, {
       languageCode: 'en-US',
-      name: currentPersonality.voiceId,
-      ssmlGender: 'NEUTRAL'
+      name: currentPersonality.voiceConfig.name, // Use the voice config from personality
+      ssmlGender: currentPersonality.voiceConfig.ssmlGender
     });
 
     const audioUrl = await streamToTwilio(audioBuffer);

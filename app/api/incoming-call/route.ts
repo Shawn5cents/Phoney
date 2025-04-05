@@ -8,12 +8,12 @@ import { GoogleTTSVoice } from '@/types/voice-types';
 
 const { VoiceResponse } = twilio.twiml;
 
-// Configure high-quality voices for different personalities using most natural-sounding voices
+// Configure high-quality voices for different personalities using most natural-sounding Studio voices
 const VOICE_CONFIG: Record<string, GoogleTTSVoice> = {
   professional: { languageCode: 'en-US', name: 'en-US-Studio-O', ssmlGender: 'FEMALE' }, // Warm, confident female voice
-  friendly: { languageCode: 'en-US', name: 'en-US-Neural2-J', ssmlGender: 'MALE' },   // Natural, casual male voice
-  witty: { languageCode: 'en-US', name: 'en-US-Neural2-D', ssmlGender: 'MALE' },      // Energetic male voice
-  zen: { languageCode: 'en-US', name: 'en-US-Neural2-F', ssmlGender: 'FEMALE' }        // Calm, soothing female voice
+  friendly: { languageCode: 'en-US', name: 'en-US-Studio-M', ssmlGender: 'MALE' },   // Natural, casual male voice
+  witty: { languageCode: 'en-US', name: 'en-US-Studio-D', ssmlGender: 'MALE' },      // Energetic male voice
+  zen: { languageCode: 'en-US', name: 'en-US-Studio-F', ssmlGender: 'FEMALE' }        // Calm, soothing female voice
 };
 
 // Natural greeting variations

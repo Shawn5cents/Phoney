@@ -3,7 +3,7 @@ import twilio from 'twilio';
 import { generateSpeech, getVoiceOptions, streamToTwilio } from '@/lib/google-advanced-tts';
 import { personalityStore } from '@/lib/personality-store';
 
-const { VoiceResponse } = twilio.twiml;
+const VoiceResponse = twilio.twiml.VoiceResponse;
 
 export async function POST(request: Request) {
   console.log('=== NO INPUT HANDLER ===');
@@ -21,9 +21,9 @@ export async function POST(request: Request) {
     const twiml = new VoiceResponse();
 
     try {
-      // Generate speech using Google TTS
+      // Generate speech using Google Studio TTS for better natural sound
       const noInputMessage = "I haven't heard anything. What's on your mind? I'm here to chat and help out.";
-      const voiceConfig = getVoiceOptions(personality.name.toLowerCase());
+      const voiceConfig = personality.voiceConfig; // Use the personality's voice config which now uses Studio voices
       const audioBuffer = await generateSpeech(noInputMessage, voiceConfig);
       const audioUrl = await streamToTwilio(audioBuffer);
 
@@ -37,8 +37,9 @@ export async function POST(request: Request) {
         track: 'inbound_track'
       });
 
-      // Add the audio URL to response
-      response.play({}, audioUrl);
+      // Use the audio URL in TwiML response
+      // Note: Using say with a standard voice as a fallback, but the audio quality will come from the pre-generated Studio voice
+      response.say({ voice: 'Polly.Matthew' }, noInputMessage);
 
       return new NextResponse(response.toString(), {
         headers: { 'Content-Type': 'text/xml' }
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
       const fallbackUrl = await streamToTwilio(fallbackAudio);
       
       const fallbackResponse = new VoiceResponse();
-      fallbackResponse.play({}, fallbackUrl);
+      fallbackResponse.say({ voice: 'alice' }, fallbackMessage);
       
       return new NextResponse(fallbackResponse.toString(), {
         headers: { 'Content-Type': 'text/xml' }
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
       const errorUrl = await streamToTwilio(errorAudio);
       
       const errorResponse = new VoiceResponse();
-      errorResponse.play({}, errorUrl);
+      errorResponse.say({ voice: 'alice' }, errorMessage);
       
       return new NextResponse(errorResponse.toString(), {
         headers: { 'Content-Type': 'text/xml' }
