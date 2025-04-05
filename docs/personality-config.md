@@ -2,14 +2,14 @@
 
 ## Overview
 
-Phoney's AI personality system allows you to customize how your AI assistant interacts with callers. Each personality is defined by a set of characteristics that influence the AI's responses, tone, and voice.
+Phoney's AI personality system allows you to customize how your AI assistant interacts with callers. Each personality is defined by a set of characteristics that influence the Google Gemini AI's responses, tone, and Google TTS voice settings.
 
 ## Built-in Personalities
 
 ### 👔 Professional Assistant
 - **Use Case**: Corporate environments, business services
 - **Traits**: Professional, efficient, business-focused
-- **Voice**: Clear, authoritative (en-US-JennyNeural)
+- **Voice**: Clear, authoritative (Google TTS: en-US-Studio-M)
 - **Example Interactions**:
   - Scheduling meetings
   - Handling customer inquiries
@@ -18,7 +18,7 @@ Phoney's AI personality system allows you to customize how your AI assistant int
 ### 😊 Friendly Helper
 - **Use Case**: Customer service, retail, hospitality
 - **Traits**: Warm, approachable, empathetic
-- **Voice**: Friendly, welcoming (en-US-AmberNeural)
+- **Voice**: Friendly, welcoming (Google TTS: en-US-Studio-O)
 - **Example Interactions**:
   - Welcoming customers
   - Providing product information
@@ -27,7 +27,7 @@ Phoney's AI personality system allows you to customize how your AI assistant int
 ### 😄 Witty Companion
 - **Use Case**: Entertainment, casual brands, social media
 - **Traits**: Clever, humorous, engaging
-- **Voice**: Dynamic, energetic (en-US-DavisNeural)
+- **Voice**: Dynamic, energetic (Google TTS: en-US-Neural2-D)
 - **Example Interactions**:
   - Event information
   - Creative services
@@ -36,7 +36,7 @@ Phoney's AI personality system allows you to customize how your AI assistant int
 ### 🧘 Zen Guide
 - **Use Case**: Wellness, healthcare, meditation
 - **Traits**: Calm, mindful, patient
-- **Voice**: Soothing, measured (en-US-GuyNeural)
+- **Voice**: Soothing, measured (Google TTS: en-US-Neural2-C)
 - **Example Interactions**:
   - Wellness consultations
   - Appointment scheduling
@@ -48,12 +48,16 @@ Phoney's AI personality system allows you to customize how your AI assistant int
 
 ```typescript
 interface AIPersonality {
-  name: string;          // Display name
-  description: string;   // Brief description
-  systemPrompt: string;  // OpenAI system prompt
-  voiceId: string;      // Text-to-speech voice ID
-  traits: string[];     // Personality characteristics
-  examples: {           // Example conversations
+  id: string;           // Unique identifier
+  name: string;         // Display name
+  description: string;  // Brief description
+  systemPrompt: string; // Google Gemini system prompt
+  voiceSettings: {      // Google TTS voice settings
+    languageCode: string; // e.g., "en-US"
+    name: string;        // e.g., "en-US-Studio-O"
+    ssmlGender: "NEUTRAL" | "MALE" | "FEMALE";
+  };
+  examples: {          // Example conversations for context
     input: string;
     response: string;
   }[];
@@ -64,6 +68,7 @@ interface AIPersonality {
 
 ```typescript
 const customPersonality = {
+  id: "tech-support",
   name: "Tech Support",
   description: "Technical support specialist",
   systemPrompt: `You are a technical support specialist with the following traits:
@@ -72,10 +77,15 @@ const customPersonality = {
 - Clear communication
 - Solution-oriented
 
-Focus on guiding users through technical issues step by step.
-Use clear, precise language while maintaining a helpful tone.`,
-  voiceId: "en-US-TonyNeural",
-  traits: ["Technical", "Patient", "Precise", "Helpful"],
+You're answering phone calls for technical support.
+Focus on guiding callers through technical issues step by step.
+Use clear, precise language while maintaining a helpful tone.
+Keep responses concise and suitable for voice conversation.`,
+  voiceSettings: {
+    languageCode: "en-US",
+    name: "en-US-Neural2-D",
+    ssmlGender: "MALE"
+  },
   examples: [
     {
       input: "My internet isn't working",
@@ -104,27 +114,28 @@ Use clear, precise language while maintaining a helpful tone.`,
    - Keep responses concise but helpful
 
 3. **Voice Selection**
-   - Match voice to personality traits
-   - Consider your target audience
-   - Test for clarity and naturalness
-   - Ensure consistent speed and tone
+   - Use Google TTS voice options
+   - Select appropriate voice gender and style
+   - Choose Studio-quality voices for best results
+   - Test for clarity over phone connections
+   - Adjust speech rate for natural conversation
 
-4. **Personality Traits**
-   - List 3-5 core characteristics
-   - Make traits actionable
-   - Ensure traits complement each other
-   - Align with business needs
+4. **Personality Definition**
+   - Create focused system prompts for Google Gemini
+   - Include phone context in the prompt
+   - Specify desired tone and style clearly
+   - Ensure examples align with voice characteristics
 
 ## Real-time Switching
 
-The dashboard allows instant switching between personalities:
+The dashboard allows instant switching between personalities for incoming calls:
 
-1. Select desired personality from the grid
-2. System automatically updates:
-   - AI prompt configuration
-   - Voice settings
-   - Conversation examples
-   - Response patterns
+1. Select desired personality from the dashboard grid
+2. System automatically updates for the next caller:
+   - Google Gemini prompt configuration
+   - Google TTS voice settings
+   - Conversation context examples
+   - Response patterns and style
 
 ## Testing and Refinement
 
@@ -148,14 +159,21 @@ The dashboard allows instant switching between personalities:
 
 ## Security and Privacy
 
-- All personality configurations are stored securely
-- Voice data is processed in compliance with privacy standards
-- System prompts are encrypted in transit
-- Access controls for personality management
+- All personality configurations are stored securely in code
+- Voice data is processed through Google TTS in compliance with privacy standards
+- AI prompts and responses are transmitted securely
+- API keys are properly protected via environment variables
+- Call data and transcripts are not permanently stored
 
-## Support and Resources
+## Google Service References
 
-- [API Documentation](https://shawn5cents.github.io/Phoney/api-reference)
-- [Voice Configuration](https://shawn5cents.github.io/Phoney/voice-config)
-- [Example Gallery](https://shawn5cents.github.io/Phoney/examples)
-- [Community Templates](https://shawn5cents.github.io/Phoney/templates)
+- [Google Gemini API Documentation](https://ai.google.dev/docs/gemini_api_overview)
+- [Google Text-to-Speech Documentation](https://cloud.google.com/text-to-speech/docs)
+- [Twilio TwiML Documentation](https://www.twilio.com/docs/voice/twiml)
+- [Pusher Channels Documentation](https://pusher.com/docs/channels)
+
+## Internal Documentation
+
+- [API Reference](api-reference.md)
+- [Architecture Overview](architecture.md)
+- [Deployment Guide](deployment.md)

@@ -9,8 +9,9 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Google](https://img.shields.io/badge/Google-Gemini-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/technologies/gemini/)
-[![Unreal Speech](https://img.shields.io/badge/Unreal-Speech-FF4088?style=for-the-badge&logo=unrealengine)](https://unrealspeech.com/)
+[![Google TTS](https://img.shields.io/badge/Google-TTS-4285F4?style=for-the-badge&logo=google)](https://cloud.google.com/text-to-speech)
 [![Twilio](https://img.shields.io/badge/Twilio-API-F22F46?style=for-the-badge&logo=twilio)](https://www.twilio.com/)
+[![Pusher](https://img.shields.io/badge/Pusher-Realtime-300D4F?style=for-the-badge&logo=pusher)](https://pusher.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
 </div>
@@ -43,46 +44,46 @@
       <td align="center">🎛️ <b>Control</b></td>
     </tr>
     <tr>
-      <td>Meet Tre, your personal AI assistant</td>
-      <td>Intelligent call handling with auto-recording</td>
-      <td>Live transcription & call recording</td>
-      <td>One-click transfer with default number</td>
+      <td>Multiple AI personalities to choose from</td>
+      <td>Intelligent call handling with real-time updates</td>
+      <td>Live transcription & streaming responses</td>
+      <td>One-click transfer with call takeover</td>
     </tr>
   </table>
 </div>
 
-### 🎭 Meet Tre - Your Personal AI Assistant
+### 🎭 Multiple AI Personalities
 
-Phoney features Tre, a sophisticated personal assistant designed to handle your calls with professionalism and warmth:
+Phoney features a range of AI personalities to handle your calls, each with their own voice and character:
 
 <div align="center">
   <table>
     <tr>
-      <td align="center">🎯 <b>Natural Interaction</b></td>
-      <td align="center">📝 <b>Call Management</b></td>
-      <td align="center">🔄 <b>Smart Transfer</b></td>
-      <td align="center">🎙️ <b>Voice Quality</b></td>
+      <td align="center">🎯 <b>Professional</b></td>
+      <td align="center">😊 <b>Friendly</b></td>
+      <td align="center">😄 <b>Witty</b></td>
+      <td align="center">🧘 <b>Zen</b></td>
     </tr>
     <tr>
-      <td>Professional yet warm</td>
-      <td>Auto-recording & transcription</td>
-      <td>Default number ready</td>
-      <td>Premium Jasper voice</td>
+      <td>Formal and business-like</td>
+      <td>Warm and approachable</td>
+      <td>Clever with a sense of humor</td>
+      <td>Calm and thoughtful</td>
     </tr>
     <tr>
-      <td><i>Natural conversations</i></td>
-      <td><i>Never miss a detail</i></td>
-      <td><i>Seamless transfers</i></td>
-      <td><i>Crystal clear audio</i></td>
+      <td><i>Ideal for business calls</i></td>
+      <td><i>Great for general use</i></td>
+      <td><i>Adds entertainment</i></td>
+      <td><i>Creates calming atmosphere</i></td>
     </tr>
   </table>
 </div>
 
-#### Call Recording & Management
-- Automatic call recording for every conversation
-- Live transcription with real-time dashboard updates
-- High-quality voice using Unreal Speech's Jasper voice
-- Smart transfer system with configurable default number (334-352-9695)
+#### Real-time Call Management
+- Live call handling with Pusher-powered real-time dashboard updates
+- Streaming AI responses for natural conversation flow
+- High-quality voice using Google's advanced Text-to-Speech
+- Smart transfer system with one-click call control
 
 ## 🚀 Quick Start
 
@@ -125,17 +126,17 @@ npm run dev
       <td>
         • Next.js API Routes<br>
         • Twilio SDK<br>
-        • Pusher
+        • Pusher Channels
       </td>
       <td>
         • Google Gemini Pro<br>
         • Google Cloud TTS<br>
-        • Neural Voice Models
+        • Speech Recognition
       </td>
       <td>
-        • Vercel/Railway<br>
-        • PostgreSQL<br>
-        • Redis Cache
+        • Railway<br>
+        • WebSockets<br>
+        • Real-time Updates
       </td>
     </tr>
   </table>
@@ -152,17 +153,23 @@ npm run dev
 ### Configuring AI Personalities
 
 ```typescript
-// Tre's personality configuration
-const trePersonality = {
-  name: "Tre",
-  description: "Professional personal assistant",
-  systemPrompt: `You are Tre, Shawn's personal assistant. Be professional but warm...",
-  voice: "Jasper", // Uses Unreal Speech's premium voice
-  traits: ["Professional", "Warm", "Efficient"],
+// Example personality configuration
+const professionalPersonality = {
+  type: "PROFESSIONAL",
+  description: "Formal and business-like assistant",
+  systemPrompt: "You are Michael, a professional assistant who handles calls with formality and efficiency...",
+  voiceSettings: {
+    gender: "MALE",
+    name: "en-US-Neural2-D"
+  },
   examples: [
     {
       input: "I need to speak with Shawn directly",
-      response: "I understand you'd like to speak with Shawn, but he's asked me to handle all his calls. I'm his personal assistant Tre, and I can definitely help you with whatever you need."
+      response: "I understand your request to speak with Shawn. He's currently unavailable, but as his professional assistant, I'm fully equipped to assist you."
+    },
+    {
+      input: "When will he be available?",
+      response: "I don't have his exact availability at the moment, but I can take your information and ensure he receives your message promptly."
     }
   ]
 };
@@ -171,25 +178,24 @@ const trePersonality = {
 ### Environment Variables
 
 ```env
-# AI Configuration
-GEMINI_API_KEY=your_gemini_key
-
-# Voice Configuration
-UNREAL_SPEECH_API_KEY=your_unreal_speech_key
-
 # Twilio Configuration
 TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_PHONE_NUMBER=your_phone_number
+TWILIO_API_KEY_SID=your_api_key_sid
+TWILIO_API_KEY_SECRET=your_api_key_secret
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
+
+# Google AI Configuration
+GOOGLE_API_KEY=your_google_api_key
 
 # Pusher Configuration (for real-time updates)
-PUSHER_APP_ID=your_app_id
-PUSHER_KEY=your_key
-PUSHER_SECRET=your_secret
-PUSHER_CLUSTER=your_cluster
+PUSHER_APP_ID=your_pusher_app_id
+PUSHER_KEY=your_pusher_key
+PUSHER_SECRET=your_pusher_secret
+PUSHER_CLUSTER=your_pusher_cluster
 
-# Transfer Configuration
-DEFAULT_TRANSFER_NUMBER=334-352-9695
+# Client-side Pusher Configuration
+NEXT_PUBLIC_PUSHER_KEY=your_pusher_key
+NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
 ```
 
 ## 🤝 Contributing

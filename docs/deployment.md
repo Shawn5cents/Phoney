@@ -2,153 +2,182 @@
 
 ## Cloud Deployment Options
 
-### 1. Vercel (Recommended)
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-```
-
-### 2. Railway
+### Railway (Recommended)
 ```bash
 # Install Railway CLI
 npm i -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Link project
+railway link
 
 # Deploy
 railway up
 ```
 
-### 3. AWS
-- Use Elastic Beanstalk
-- Configure environment variables
-- Set up load balancer
-- Configure auto-scaling
+### Manual Setup
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Build the project: `npm run build`
+4. Start the server: `npm start`
 
 ## Environment Setup
 
-### Production Environment Variables
+### Required Environment Variables
 ```env
-NODE_ENV=production
-NEXT_PUBLIC_BASE_URL=https://your-domain.com
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_API_KEY_SID=your_api_key_sid
+TWILIO_API_KEY_SECRET=your_api_key_secret
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
-# API Keys (use secure vault in production)
-TWILIO_ACCOUNT_SID=xxx
-TWILIO_AUTH_TOKEN=xxx
-OPENAI_API_KEY=xxx
-ELEVENLABS_API_KEY=xxx
+# Google AI Configuration
+GOOGLE_API_KEY=your_google_api_key
 
-# Database
-DATABASE_URL=xxx
+# Pusher Configuration (for real-time updates)
+PUSHER_APP_ID=your_pusher_app_id
+PUSHER_KEY=your_pusher_key
+PUSHER_SECRET=your_pusher_secret
+PUSHER_CLUSTER=your_pusher_cluster
 
-# Real-time
-PUSHER_APP_ID=xxx
-PUSHER_KEY=xxx
-PUSHER_SECRET=xxx
-PUSHER_CLUSTER=xxx
+# Client-side Pusher Configuration
+NEXT_PUBLIC_PUSHER_KEY=your_pusher_key
+NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
 ```
 
-## Infrastructure Setup
+## External Service Setup
 
-### 1. Database
-- Set up PostgreSQL
-- Run migrations
-- Configure connection pool
+### 1. Twilio Configuration
+- Create a Twilio account and purchase a phone number
+- Set up a Twilio API key and secret (preferred over auth token)
+- Configure your Twilio phone number to use webhooks:
+  - Voice webhook (HTTP POST): `https://your-domain.com/api/incoming-call`
 
-### 2. Redis Cache
-- Configure Redis cluster
-- Set up persistence
-- Configure maxmemory
+### 2. Pusher Configuration
+- Create a Pusher Channels account and app
+- Configure your app to use private channels
+- Enable client events if you need them
+- Note your app ID, key, secret, and cluster
 
-### 3. CDN
-- Configure Cloudflare
-- Set up caching rules
-- Enable HTTPS
+### 3. Google API Setup
+- Create a Google Cloud project
+- Enable the Gemini API and get an API key
+- Enable the Cloud Text-to-Speech API
 
-## Monitoring
+## Monitoring and Debugging
 
-### 1. Application Monitoring
-- Set up New Relic
-- Configure alerts
-- Monitor performance
+### 1. Railway Monitoring
+- Use Railway's built-in logs and metrics
+- Set up deployment notifications
+- Monitor resource usage
 
-### 2. Error Tracking
-- Implement Sentry
-- Set up error alerts
-- Configure release tracking
+### 2. Debugging Call Issues
+- Check Twilio logs for call events
+- Review application logs with timestamps
+- Use the dashboard to monitor active calls
+- Test with Twilio test credentials
 
-### 3. Logging
-- Configure logging service
-- Set up log rotation
-- Implement log analysis
+### 3. Real-time Updates Issues
+- Verify Pusher connection status
+- Check browser console for WebSocket errors
+- Confirm proper channel subscriptions
 
-## Security
+## Security Considerations
 
-### 1. SSL/TLS
-- Install SSL certificate
-- Configure HTTPS
-- Set up automatic renewal
+### 1. Environment Variables
+- Store all credentials securely in Railway's environment variables
+- Never commit sensitive information to version control
+- Use an API key for Twilio instead of an auth token
 
-### 2. API Security
-- Implement rate limiting
-- Set up API authentication
-- Configure CORS
+### 2. Pusher Security
+- Implement the Pusher auth endpoint properly
+- Validate channel access for private channels
+- Keep your Pusher secret secure
 
-### 3. Data Protection
-- Enable encryption at rest
-- Configure backup strategy
-- Implement audit logging
+### 3. API Security
+- Protect sensitive endpoints
+- Validate all incoming Twilio webhook requests
+- Implement proper error handling to avoid exposing details
 
-## Performance
+## Call Flow Optimization
 
-### 1. Optimization
-- Enable compression
-- Configure caching
-- Optimize assets
+### 1. Speech Recognition
+- Use the `enhanced: true` flag for better recognition
+- Set appropriate timeout values for user speech
+- Use speech hints for common words
+- Set the proper speech model for phone calls
 
-### 2. Scaling
-- Set up auto-scaling
-- Configure load balancing
-- Optimize database queries
+### 2. AI Responses
+- Optimize prompts for brief, natural responses
+- Implement streaming for real-time feedback
+- Ensure proper error handling for AI requests
+- Use appropriate voice settings for clarity
 
-## Maintenance
+## Testing and Maintenance
 
-### 1. Backup Strategy
+### 1. Testing Calls
 ```bash
-# Database backup
-pg_dump -U username -d database > backup.sql
+# Use Twilio CLI to test calls
+npm install -g twilio-cli
+twilio phone-numbers:update your-twilio-number --sms-url=https://your-app.railway.app/api/incoming-call
 
-# File backup
-rsync -av /app/data/ /backup/
+# Make a test call
+twilio api:core:calls:create --from your-twilio-number --to your-phone-number --url https://your-app.railway.app/api/incoming-call
 ```
 
-### 2. Updates
+### 2. Updates and Maintenance
 ```bash
 # Update dependencies
 npm update
 
-# Security updates
+# Check for vulnerabilities
+npm audit
+
+# Fix vulnerabilities
 npm audit fix
 ```
 
-### 3. Monitoring
+### 3. Checking Logs in Railway
 ```bash
-# Check logs
-tail -f /var/log/app.log
+# Install Railway CLI
+npm i -g @railway/cli
 
-# Monitor processes
-pm2 status
+# View logs
+railway logs
+
+# View specific service logs
+railway logs -s your-service-name
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Connection Timeouts**
-   - Check network configuration
-   - Verify firewall rules
-   - Review load balancer settings
+1. **Twilio Call Issues**
+   - Verify webhook URL is correct and accessible
+   - Check Twilio phone number configuration
+   - Ensure your TwiML responses are valid
+   - Verify proper call flow with Twilio logs
+
+2. **Speech Recognition Problems**
+   - Check gather verb settings in TwiML
+   - Verify timeouts are appropriate
+   - Review the full form data coming from Twilio
+   - Test with different speech hints
+
+3. **Pusher Connection Issues**
+   - Verify Pusher credentials are correct
+   - Check WebSocket connectivity
+   - Ensure channel names match between client and server
+   - Verify authentication endpoint is working
+
+4. **AI Response Problems**
+   - Check Google API key and permissions
+   - Review AI prompt for any issues
+   - Ensure streaming implementation is correct
+   - Validate TTS voice settings
 
 2. **Memory Issues**
    - Monitor memory usage

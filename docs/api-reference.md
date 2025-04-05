@@ -5,142 +5,240 @@
 ### 📞 Call Management
 
 #### POST `/api/incoming-call`
-Handles incoming phone calls from Twilio.
+Handles incoming phone calls from Twilio. Returns TwiML to gather speech input.
 ```typescript
 POST /api/incoming-call
-Content-Type: application/json
+Content-Type: application/x-www-form-urlencoded
 
 {
   "CallSid": string,
   "From": string,
   "To": string,
-  "Direction": string
+  "Direction": string,
+  // Other Twilio parameters
 }
 ```
 
 #### POST `/api/process-speech`
-Processes speech input and returns AI response.
+Processes speech input from Twilio, sends to Google Gemini, and returns AI response as TwiML.
 ```typescript
 POST /api/process-speech
+Content-Type: application/x-www-form-urlencoded
+
+{
+  "CallSid": string,
+  "SpeechResult": string,  // The recognized speech
+  "Confidence": string,    // Confidence score as string
+  "CallStatus": string,
+  // Other Twilio parameters
+}
+```
+
+#### POST `/api/no-input`
+Handles scenarios when no speech input is detected.
+```typescript
+POST /api/no-input
+Content-Type: application/x-www-form-urlencoded
+
+{
+  "CallSid": string,
+  "CallStatus": string,
+  // Other Twilio parameters
+}
+```
+
+#### POST `/api/transfer-call`
+Transfers the current call to another phone number.
+```typescript
+POST /api/transfer-call
 Content-Type: application/json
 
 {
-  "callId": string,
-  "transcript": string,
-  "confidence": number
+  "callSid": string,
+  "transferTo": string  // Phone number to transfer to
 }
 ```
 
-#### POST `/api/take-over-call`
-Enables human intervention in active calls.
-```typescript
-POST /api/take-over-call
-Content-Type: application/json
+## Pusher Events
 
+### Channel: `calls`
+Broadcasts events for all calls.
+
+#### `new-call`
+```typescript
 {
-  "callId": string,
-  "agentId": string,
-  "action": "take-over" | "return-to-ai"
+  callSid: string,
+  from: string,
+  to: string,
+  status: string,
+  timestamp: string
 }
 ```
 
-## Events
+### Channel: `call-${callSid}`
+Broadcasts events for a specific call.
 
-### Pusher Events
-
-#### `call.started`
+#### `speech-received`
 ```typescript
 {
-  callId: string,
-  timestamp: string,
-  caller: string,
-  recipient: string
+  callSid: string,
+  speechResult: string,
+  confidence: number,
+  timestamp: string
 }
 ```
 
-#### `call.transcription`
+#### `ai-thinking`
 ```typescript
 {
-  callId: string,
-  timestamp: string,
-  text: string,
-  speaker: "user" | "ai"
+  callSid: string,
+  timestamp: string
 }
 ```
 
-#### `call.ended`
+#### `ai-response-chunk`
 ```typescript
 {
-  callId: string,
-  timestamp: string,
+  callSid: string,
+  chunk: string,  // Partial AI response
+  isComplete: boolean,
+  timestamp: string
+}
+```
+
+#### `call-completed`
+```typescript
+{
+  callSid: string,
   duration: number,
-  reason: string
+  timestamp: string
 }
 ```
 
 ## Models
 
-### Call Object
+### AIPersonality
+```typescript
+interface AIPersonality {
+  id: string;
+  name: string;          // Display name (e.g., "Professional")
+  description: string;   // Brief description
+  systemPrompt: string;  // Google Gemini system prompt
+  voiceSettings: {      // Google TTS voice settings
+    languageCode: string;
+    name: string;
+    ssmlGender: "NEUTRAL" | "MALE" | "FEMALE";
+  };
+  examples: {           // Example conversations for context
+    input: string;
+    response: string;
+  }[];
+}
+```
+
+### Call Object (Client-side)
 ```typescript
 interface Call {
-  id: string;
-  status: "active" | "ended";
+  callSid: string;
+  from: string;
+  to: string;
+  status: "in-progress" | "completed" | "failed";
   startTime: string;
   endTime?: string;
-  caller: string;
-  recipient: string;
-  transcripts: Transcript[];
-  interventions: Intervention[];
+  transcript: {
+    speaker: "user" | "ai";
+    text: string;
+    timestamp: string;
+  }[];
+  currentAIResponse?: string;
+  personality?: string;
 }
 ```
 
-### Transcript Object
+### TwiML Components
+The application generates TwiML responses for Twilio:
+
+```xml
+<!-- Example Gather TwiML -->
+<Response>
+  <Gather input="speech" action="/api/process-speech" method="POST" timeout="10" 
+         speechTimeout="auto" speechModel="phone_call" enhanced="true" 
+         language="en-US" hints="yes, no, maybe, thanks, goodbye, transfer, Shawn">
+    <Say>Hello, how can I help you today?</Say>
+  </Gather>
+  <Redirect method="POST">/api/no-input</Redirect>
+</Response>
+```
+
+## API Dependencies
+
+### Google Gemini API
+Used for generating AI responses based on speech input.
+
 ```typescript
-interface Transcript {
-  id: string;
-  callId: string;
-  timestamp: string;
-  text: string;
-  speaker: "user" | "ai";
-  confidence: number;
-}
+// Example Gemini API integration
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+// Creating a chat session
+const chat = model.startChat({
+  history: previousMessages,
+  generationConfig: {
+    temperature: 0.7,
+    topP: 0.8,
+    topK: 40,
+    maxOutputTokens: 200,
+  },
+  safetySettings: [...]
+});
+
+// Streaming response
+const result = await chat.sendMessageStream(userMessage);
 ```
 
-### Intervention Object
+### Google Text-to-Speech
+Used for generating natural-sounding voice responses.
+
 ```typescript
-interface Intervention {
-  id: string;
-  callId: string;
-  agentId: string;
-  startTime: string;
-  endTime?: string;
-  reason?: string;
-}
+// Example voice settings
+const voiceSettings = {
+  languageCode: "en-US",
+  name: "en-US-Studio-O",
+  ssmlGender: "FEMALE"
+};
+
+// Converting text to speech
+const [response] = await textToSpeechClient.synthesizeSpeech({
+  input: { text: aiResponse },
+  voice: voiceSettings,
+  audioConfig: { audioEncoding: "MP3" },
+});
 ```
 
-## Error Codes
+### Pusher
+Used for real-time updates to the dashboard.
 
-| Code | Description |
-|------|-------------|
-| 1001 | Call not found |
-| 1002 | Invalid call state |
-| 1003 | Transcription failed |
-| 1004 | AI response error |
-| 1005 | Voice generation failed |
-| 2001 | Authentication failed |
-| 2002 | Rate limit exceeded |
-| 3001 | Invalid request body |
-| 5001 | Internal server error |
+```typescript
+// Example Pusher initialization
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.PUSHER_CLUSTER!,
+});
 
-## Rate Limits
+// Triggering an event
+await pusher.trigger("call-" + callSid, "ai-response-chunk", {
+  callSid,
+  chunk: responseChunk,
+  isComplete: false,
+  timestamp: new Date().toISOString(),
+});
+```
 
-- Incoming calls: 100/minute
-- Speech processing: 300/minute
-- Take-over actions: 50/minute
+## Security Considerations
 
-## Authentication
-
-All API endpoints require authentication using:
-1. API Key in headers
-2. JWT token for dashboard access
-3. Webhook signatures for Twilio
+- Ensure all API keys are stored securely in environment variables
+- Validate incoming Twilio webhooks using signature validation
+- Use Pusher's private channels for sensitive call data
+- Implement proper error handling to avoid exposing system details
