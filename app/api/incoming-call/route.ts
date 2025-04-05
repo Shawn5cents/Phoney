@@ -95,37 +95,43 @@ export async function POST(request: Request) {
       console.log('Audio URL to play length:', audioUrl.length);
       console.log('Audio URL to play preview:', audioUrl.substring(0, 50) + '...');
     
-      // Play initial hello
-      console.log('Adding play command to TwiML');
-      twiml.play(audioUrl);
+      // Start gathering speech immediately after greeting
+      const gather = twiml.gather({
+        input: ['speech'],
+        action: '/api/process-speech',
+        method: 'POST',
+        speechTimeout: 'auto',
+        speechModel: 'phone_call',
+        enhanced: true
+      });
+
+      // Play initial hello within gather
+      console.log('Adding play command to TwiML within gather');
+      gather.play(audioUrl);
+
+      // Add a no-input handler with follow-up
+      twiml.redirect({
+        method: 'POST'
+      }, '/api/no-input');
     } catch (speechError) {
       console.error('Error generating or streaming speech:', speechError);
       // Fall back to basic TwiML if TTS fails
       console.log('Falling back to basic TwiML Say verb');
-      twiml.say('Hello? This is an automated assistant. How can I help you today?');
+      const gather = twiml.gather({
+        input: ['speech'],
+        action: '/api/process-speech',
+        method: 'POST',
+        speechTimeout: 'auto',
+        speechModel: 'phone_call',
+        enhanced: true
+      });
+      gather.say('Hello? This is an automated assistant. How can I help you today?');
+      
+      // Add a no-input handler
+      twiml.redirect({
+        method: 'POST'
+      }, '/api/no-input');
     }
-    
-    // Wait 2 seconds
-    twiml.pause({ length: 2 });
-    
-    // Follow up if no response - use same personality for consistency
-    const followUpAudio = await generateSpeech('Hello? Anyone there?', {
-      personalityType: 'PROFESSIONAL',
-      gender: 'MALE'
-      // Using same voice throughout the call for natural experience
-    });
-    
-    // Gather speech after follow-up
-    const gather = twiml.gather({
-      input: ['speech'],
-      action: '/api/process-speech',
-      method: 'POST',
-      speechTimeout: 'auto',
-      speechModel: 'phone_call',
-      enhanced: true
-    });
-    
-    gather.play(await streamToTwilio(followUpAudio));
     
     const response = twiml.toString();
     console.log('Generated TwiML:', response);
