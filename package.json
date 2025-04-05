@@ -31,6 +31,8 @@
     "@tailwindcss/language-server": "^0.14.13",
     "@types/node": "^22.14.0",
     "@types/ws": "^8.18.1",
-    "sharp": "^0.33.5"
+    "bufferutil": "^4.0.9",
+    "sharp": "^0.33.5",
+    "utf-8-validate": "^6.0.5"
   }
 }
