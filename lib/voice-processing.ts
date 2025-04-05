@@ -1,8 +1,8 @@
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
-import { SpeechClient } from '@google-cloud/speech';
-import { protos } from '@google-cloud/text-to-speech';
+import { SpeechClient, protos as speechProtos } from '@google-cloud/speech';
+import { protos as ttsProtos } from '@google-cloud/text-to-speech';
 
-// Define interfaces to match the AI personality structure from personality-store.ts
+// Type definitions for voice configuration
 export interface VoiceConfig {
   languageCode: string;
   name: string;
@@ -11,7 +11,7 @@ export interface VoiceConfig {
   pitch?: number;
 }
 
-// Interface to match the AIPersonalityConfig from personality-store.ts
+// Type definition for AI personality configuration
 export interface AIPersonalityConfig {
   name: string;
   systemPrompt: string;
@@ -22,79 +22,112 @@ export interface AIPersonalityConfig {
   examples?: { input: string; response: string }[];
 }
 
-// Initialize Google Cloud clients
-const textToSpeechClient = new TextToSpeechClient();
-const speechClient = new SpeechClient();
+// Type for Twilio voice configuration
+export interface TwilioVoiceConfig {
+  voice: string;
+  language: string;
+}
 
-// Map of Google voice IDs to Twilio voice names
-const VOICE_MAPPING: Record<string, string> = {
-  'en-US-Studio-O': 'woman',
-  'en-US-Studio-M': 'man',
-  'en-US-Studio-G': 'woman',
-  'en-US-Wavenet-F': 'woman',
-  'en-US-Wavenet-D': 'man',
-  'en-US-Wavenet-A': 'woman',
-  'en-US-Wavenet-B': 'man',
-  'en-US-Wavenet-C': 'woman',
-  'en-US-Wavenet-E': 'man',
-  'en-US-Wavenet-J': 'woman'
-};
+// Initialize Google Cloud clients with proper error handling
+class GoogleCloudClients {
+  private static instance: GoogleCloudClients;
+  private _textToSpeechClient: TextToSpeechClient | null = null;
+  private _speechClient: SpeechClient | null = null;
 
-// Voice processing configuration
-export const voiceProcessingConfig = {
-  // Default voice settings if not specified
-  defaultVoice: {
-    languageCode: 'en-US',
-    name: 'en-US-Studio-O',
-    ssmlGender: 'FEMALE' as const
-  },
-  
-  // Speech recognition settings
-  speechRecognition: {
-    encoding: 'LINEAR16' as const,
-    sampleRateHertz: 8000,
-    languageCode: 'en-US',
-    model: 'phone_call',
-    useEnhanced: true
+  private constructor() {
+    try {
+      this._textToSpeechClient = new TextToSpeechClient();
+      this._speechClient = new SpeechClient();
+    } catch (error) {
+      console.error('Failed to initialize Google Cloud clients:', error);
+    }
   }
-};
+
+  static getInstance(): GoogleCloudClients {
+    if (!GoogleCloudClients.instance) {
+      GoogleCloudClients.instance = new GoogleCloudClients();
+    }
+    return GoogleCloudClients.instance;
+  }
+
+  get textToSpeechClient(): TextToSpeechClient | null {
+    return this._textToSpeechClient;
+  }
+
+  get speechClient(): SpeechClient | null {
+    return this._speechClient;
+  }
+}
+
+const clients = GoogleCloudClients.getInstance();
+
+import { VOICE_MAPPING, voiceProcessingConfig } from './voice-config';
 
 /**
  * Generate speech from text using Google Text-to-Speech
  * @param text The text to convert to speech
  * @param voiceConfig Voice configuration from AI personality
- * @returns Audio buffer
+ * @returns Audio buffer or null if error
  */
-export async function generateSpeech(text: string, voiceConfig: VoiceConfig): Promise<Buffer> {
+export async function generateSpeech(text: string, voiceConfig: VoiceConfig): Promise<Buffer | null> {
+  const ttsClient = clients.textToSpeechClient;
+  if (!ttsClient) {
+    console.error('Text-to-speech client not initialized');
+    return null;
+  }
+
+  if (!text || text.trim() === '') {
+    console.warn('Empty text provided to generateSpeech');
+    return null;
+  }
+
   try {
-    // Define proper types for the request
-    const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
+    // Define request with proper types
+    const request: ttsProtos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
       input: { text },
       voice: {
-        languageCode: voiceConfig.languageCode || 'en-US',
+        languageCode: voiceConfig.languageCode || voiceProcessingConfig.defaultVoice.languageCode,
         name: voiceConfig.name || voiceProcessingConfig.defaultVoice.name,
-        ssmlGender: getSsmlGender(voiceConfig.ssmlGender) || getSsmlGender(voiceProcessingConfig.defaultVoice.ssmlGender)
+        ssmlGender: getSsmlGender(voiceConfig.ssmlGender)
       },
       audioConfig: {
-        audioEncoding: protos.google.cloud.texttospeech.v1.AudioEncoding.MP3,
-        effectsProfileId: ['telephony-class-application']
+        audioEncoding: voiceProcessingConfig.audioOutput.encoding,
+        effectsProfileId: voiceProcessingConfig.audioOutput.effectsProfile,
+        speakingRate: voiceConfig.speakingRate,
+        pitch: voiceConfig.pitch
       },
     };
 
-    const [response] = await textToSpeechClient.synthesizeSpeech(request);
+    const [response] = await ttsClient.synthesizeSpeech(request);
+    
+    if (!response.audioContent) {
+      throw new Error('No audio content returned from Google TTS');
+    }
+    
     return Buffer.from(response.audioContent as Uint8Array);
   } catch (error) {
     console.error('Error generating speech:', error);
-    throw error;
+    return null;
   }
 }
 
 /**
  * Transcribe speech from audio using Google Speech-to-Text
  * @param audioBuffer Audio buffer to transcribe
- * @returns Transcription text
+ * @returns Transcription text or empty string if error
  */
 export async function transcribeSpeech(audioBuffer: Buffer): Promise<string> {
+  const sttClient = clients.speechClient;
+  if (!sttClient) {
+    console.error('Speech client not initialized');
+    return '';
+  }
+
+  if (!audioBuffer || audioBuffer.length === 0) {
+    console.warn('Empty audio buffer provided to transcribeSpeech');
+    return '';
+  }
+
   try {
     const audio = {
       content: audioBuffer.toString('base64'),
@@ -105,25 +138,27 @@ export async function transcribeSpeech(audioBuffer: Buffer): Promise<string> {
       encoding: voiceProcessingConfig.speechRecognition.encoding,
       sampleRateHertz: voiceProcessingConfig.speechRecognition.sampleRateHertz,
       languageCode: voiceProcessingConfig.speechRecognition.languageCode,
-      useEnhanced: true,
-      model: 'phone_call',
+      useEnhanced: voiceProcessingConfig.speechRecognition.useEnhanced,
+      model: voiceProcessingConfig.speechRecognition.model,
     };
 
-    const request = {
-      audio,
-      config,
-    };
+    const request = { audio, config };
 
-    const [response] = await speechClient.recognize(request);
+    const [response] = await sttClient.recognize(request);
+    
+    if (!response.results || response.results.length === 0) {
+      return '';
+    }
+    
     const transcription = response.results
-      ?.map((result: any) => result.alternatives?.[0]?.transcript)
-      .filter(Boolean)
+      .map((result: speechProtos.google.cloud.speech.v1.ISpeechRecognitionResult) => result.alternatives?.[0]?.transcript || '')
+      .filter((text: string) => text.trim() !== '')
       .join('\n');
     
-    return transcription || '';
+    return transcription;
   } catch (error) {
     console.error('Error transcribing speech:', error);
-    throw error;
+    return '';
   }
 }
 
@@ -133,8 +168,17 @@ export async function transcribeSpeech(audioBuffer: Buffer): Promise<string> {
  * @returns SSML formatted text
  */
 export function formatSSML(text: string): string {
-  // Add pauses at punctuation
-  let ssml = text
+  if (!text) return '<speak></speak>';
+  
+  // Escape XML special characters
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  
+  // Add pauses at punctuation for more natural speech
+  const ssml = escaped
     .replace(/\./g, '.<break time="500ms"/>')
     .replace(/\?/g, '?<break time="500ms"/>')
     .replace(/\!/g, '!<break time="500ms"/>')
@@ -146,15 +190,21 @@ export function formatSSML(text: string): string {
 
 /**
  * Helper function to convert string gender to SSML gender enum
+ * @param gender The gender string
+ * @returns The corresponding SSML gender enum value
  */
-function getSsmlGender(gender?: string): protos.google.cloud.texttospeech.v1.SsmlVoiceGender {
-  if (gender === 'MALE') {
-    return protos.google.cloud.texttospeech.v1.SsmlVoiceGender.MALE;
-  } else if (gender === 'NEUTRAL') {
-    return protos.google.cloud.texttospeech.v1.SsmlVoiceGender.NEUTRAL;
-  } else {
-    // Default to FEMALE
-    return protos.google.cloud.texttospeech.v1.SsmlVoiceGender.FEMALE;
+function getSsmlGender(gender?: string): ttsProtos.google.cloud.texttospeech.v1.SsmlVoiceGender {
+  const SsmlVoiceGender = ttsProtos.google.cloud.texttospeech.v1.SsmlVoiceGender;
+  
+  switch (gender) {
+    case 'MALE':
+      return SsmlVoiceGender.MALE;
+    case 'NEUTRAL':
+      return SsmlVoiceGender.NEUTRAL;
+    case 'FEMALE':
+      return SsmlVoiceGender.FEMALE;
+    default:
+      return SsmlVoiceGender.FEMALE; // Default to FEMALE
   }
 }
 
@@ -163,7 +213,7 @@ function getSsmlGender(gender?: string): protos.google.cloud.texttospeech.v1.Ssm
  * @param voiceConfig Voice configuration from AI personality
  * @returns Voice configuration for Twilio
  */
-export function getTwilioVoiceConfig(voiceConfig: VoiceConfig | undefined): any {
+export function getTwilioVoiceConfig(voiceConfig: VoiceConfig | undefined): TwilioVoiceConfig {
   if (!voiceConfig) {
     return { voice: 'woman', language: 'en-US' };
   }
@@ -184,6 +234,8 @@ export function getTwilioVoiceConfig(voiceConfig: VoiceConfig | undefined): any 
  * @returns Voice configuration
  */
 export function getVoiceConfigFromPersonality(personality: AIPersonalityConfig): VoiceConfig {
-  // Return the voice config directly
+  if (!personality || !personality.voiceConfig) {
+    return voiceProcessingConfig.defaultVoice;
+  }
   return personality.voiceConfig;
 }

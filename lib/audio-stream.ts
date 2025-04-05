@@ -1,76 +1,23 @@
 import { WebSocket, WebSocketServer } from 'ws';
-import { AudioChunk, AudioStreamOptions, VADResult, ConversationContext } from '../types/audio';
+import { AudioChunk } from '../types/audio';
 import { GeminiStream } from './gemini';
 import { personalityStore } from './personality-store';
 import { pusherServer } from './pusher';
 import { speechRecognitionService } from './speech-recognition';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
+import { StreamManager, StreamConfig } from './stream-manager';
 
-const MAX_HISTORY_LENGTH = 10;
-const INACTIVITY_TIMEOUT = 300000; // 5 minutes
-const MAX_CONCURRENT_CALLS = 100;
-const BUFFER_SIZE = 50;
-
-class VoiceActivityDetector {
-  private buffer: Float32Array[];
-  private minSpeechFrames: number = 10;
-  private silenceThreshold: number = 0.1;
-  private maxBufferSize: number = BUFFER_SIZE;
-  
-  constructor() {
-    this.buffer = [];
-  }
-
-  analyze(audioData: Float32Array): VADResult {
-    const energy = this.calculateEnergy(audioData);
-    this.buffer.push(audioData);
-
-    if (this.buffer.length > this.maxBufferSize) {
-      this.buffer.shift();
-    }
-
-    const isSpeech = energy > this.silenceThreshold;
-    const result: VADResult = {
-      isSpeech,
-      confidence: this.calculateConfidence(energy),
-      startTime: Date.now()
-    };
-
-    return result;
-  }
-
-  private calculateEnergy(audioData: Float32Array): number {
-    let sum = 0;
-    for (let i = 0; i < audioData.length; i++) {
-      sum += audioData[i] * audioData[i];
-    }
-    return Math.sqrt(sum / audioData.length);
-  }
-
-  private calculateConfidence(energy: number): number {
-    return Math.min(1, Math.max(0, energy / (this.silenceThreshold * 2)));
-  }
-
-  reset() {
-    this.buffer = [];
-  }
-}
-
+/**
+ * Handles WebSocket audio streams and real-time processing
+ */
 export class AudioStreamHandler {
   private wsServer: WebSocketServer;
-  private activeStreams: Map<string, {
-    vad: VoiceActivityDetector;
-    context: ConversationContext;
-    aiStream: GeminiStream | null;
-    lastSpeechTime: number;
-    lastActivity: number;
-    ws: WebSocket;
-  }>;
+  private streamManager: StreamManager;
 
-  constructor() {
+  constructor(config: Partial<StreamConfig> = {}) {
     this.wsServer = new WebSocketServer({ noServer: true });
-    this.activeStreams = new Map();
+    this.streamManager = new StreamManager(config);
     this.setupWebSocketHandlers();
     this.startInactivityCheck();
   }
@@ -85,28 +32,12 @@ export class AudioStreamHandler {
         return;
       }
 
-      // Check concurrent call limit
-      if (this.activeStreams.size >= MAX_CONCURRENT_CALLS) {
+      // Initialize stream
+      const streamData = this.streamManager.createStream(callSid, ws);
+      if (!streamData) {
         ws.close(1013, 'Maximum concurrent calls reached');
         return;
       }
-
-      // Initialize stream context
-      this.activeStreams.set(callSid, {
-        vad: new VoiceActivityDetector(),
-        context: {
-          history: [],
-          currentSpeech: '',
-          lastResponse: '',
-          personality: 'professional',
-          startTime: Date.now(),
-          turnCount: 0
-        },
-        aiStream: null,
-        lastSpeechTime: Date.now(),
-        lastActivity: Date.now(),
-        ws
-      });
 
       // Set up heartbeat
       const heartbeat = setInterval(() => {
@@ -117,10 +48,10 @@ export class AudioStreamHandler {
 
       ws.on('message', async (data: WebSocket.RawData) => {
         try {
-          const streamData = this.activeStreams.get(callSid);
+          const streamData = this.streamManager.getStream(callSid);
           if (!streamData) return;
 
-          streamData.lastActivity = Date.now();
+          this.streamManager.updateActivity(callSid);
           const chunk: AudioChunk = JSON.parse(data.toString());
           await this.processAudioChunk(chunk, ws);
         } catch (error) {
@@ -131,19 +62,16 @@ export class AudioStreamHandler {
 
       ws.on('close', () => {
         clearInterval(heartbeat);
-        this.cleanupStream(callSid);
+        this.streamManager.cleanupStream(callSid);
       });
 
       ws.on('error', (error) => {
         console.error(`WebSocket error for call ${callSid}:`, error);
-        this.cleanupStream(callSid);
+        this.streamManager.cleanupStream(callSid);
       });
 
       ws.on('pong', () => {
-        const streamData = this.activeStreams.get(callSid);
-        if (streamData) {
-          streamData.lastActivity = Date.now();
-        }
+        this.streamManager.updateActivity(callSid);
       });
 
       console.log(`WebSocket connection established for call ${callSid}`);
@@ -151,7 +79,7 @@ export class AudioStreamHandler {
   }
 
   private async processAudioChunk(chunk: AudioChunk, ws: WebSocket) {
-    const streamData = this.activeStreams.get(chunk.metadata.callSid);
+    const streamData = this.streamManager.getStream(chunk.metadata.callSid);
     if (!streamData) return;
 
     const { vad, context } = streamData;
@@ -217,14 +145,14 @@ export class AudioStreamHandler {
   }
 
   private async handleFinalTranscription(callSid: string, text: string, ws: WebSocket) {
-    const streamData = this.activeStreams.get(callSid);
+    const streamData = this.streamManager.getStream(callSid);
     if (!streamData) return;
 
     const { context } = streamData;
     
     // Update conversation history with length limit
     context.history.push(`User: ${text}`);
-    if (context.history.length > MAX_HISTORY_LENGTH) {
+    if (context.history.length > this.streamManager.maxHistoryLength) {
       context.history.shift();
     }
 
@@ -287,11 +215,10 @@ export class AudioStreamHandler {
 
   private startInactivityCheck() {
     setInterval(() => {
-      const now = Date.now();
-      for (const [callSid, streamData] of this.activeStreams) {
-        if (now - streamData.lastActivity > INACTIVITY_TIMEOUT) {
+      for (const callSid of this.streamManager.getActiveStreamIds()) {
+        if (this.streamManager.isInactive(callSid)) {
           console.log(`Closing inactive stream for call ${callSid}`);
-          this.cleanupStream(callSid);
+          this.streamManager.cleanupStream(callSid);
         }
       }
     }, 60000); // Check every minute

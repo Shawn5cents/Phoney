@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
+import { SayAttributes } from 'twilio/lib/twiml/VoiceResponse';
 import { personalityStore } from '@/lib/personality-store';
-import { headers } from 'next/headers';
-import { GoogleTTSVoice } from '@/types/voice-types';
 import { getTwilioVoiceConfig, getVoiceConfigFromPersonality } from '@/lib/voice-processing';
+import { validateAndExtractCallData } from '@/lib/twilio-validation';
+import { CallEventManager } from '@/lib/call-events';
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -52,26 +52,14 @@ export async function POST(request: Request) {
   const twiml = new VoiceResponse();
   
   try {
-    // Validate Twilio signature
-    const twilioSignature = headers().get('x-twilio-signature');
-    if (!twilioSignature) {
-      console.error('Missing Twilio signature');
-      return new NextResponse('Unauthorized', { status: 401 });
+    // Validate and extract call data
+    const callData = await validateAndExtractCallData(request);
+    if (!callData) {
+      console.error('Invalid request data');
+      return new NextResponse('Invalid request', { status: 400 });
     }
 
-    const formData = await request.formData();
-    const callerNumber = formData.get('From') as string;
-    const callSid = formData.get('CallSid') as string;
-
-    if (!callerNumber || !callSid) {
-      console.error('Missing required parameters:', { callerNumber, callSid });
-      return new NextResponse('Missing required parameters', { status: 400 });
-    }
-
-    if (!/^CA[a-f0-9]{32}$/.test(callSid)) {
-      console.error('Invalid CallSid format:', callSid);
-      return new NextResponse('Invalid CallSid format', { status: 400 });
-    }
+    const { callerNumber, callSid } = callData;
     
     console.log('Call from:', callerNumber, 'SID:', callSid);
 
@@ -85,7 +73,14 @@ export async function POST(request: Request) {
     const welcomeMessage = getRandomGreeting();
     
     // Add the welcome message with the appropriate voice
-    twiml.say(voiceConfig, welcomeMessage);
+    // Convert to SayAttributes for TypeScript compatibility
+    const sayAttrs: SayAttributes = {
+      voice: voiceConfig.voice as any, // Cast to any to avoid TypeScript error
+      language: voiceConfig.language
+    };
+    
+    // Apply voice configuration
+    twiml.say(sayAttrs, welcomeMessage);
     
     // Set up gathering speech input from the caller
     const gather = twiml.gather({
@@ -96,33 +91,15 @@ export async function POST(request: Request) {
     });
     
     // If no input is detected, handle with no-input route
-    // Use the redirect method from Twilio's VoiceResponse
     const redirectUrl = `/api/no-input?callSid=${callSid}&personalityId=${currentPersonality.name}`;
-    twiml.say(voiceConfig, "I didn't hear anything. Let me know how I can help you.");
-    gather.say(voiceConfig, "Please speak now.");
+    twiml.say(sayAttrs, "I didn't hear anything. Let me know how I can help you.");
+    gather.say(sayAttrs, "Please speak now.");
 
-    // Initialize call in Pusher for dashboard tracking
-    await pusherServer.trigger('calls', 'call-started', {
-      callSid,
-      callerNumber,
-      timestamp,
-      status: 'in-progress',
-      personality: currentPersonality.name
-    });
-    
-    // Set initial personality (for dashboard)
-    await pusherServer.trigger(`call-${callSid}`, 'personality-changed', {
-      timestamp,
-      personality: currentPersonality
-    });
-
-    // Set initial call status
-    await pusherServer.trigger(`call-${callSid}`, 'call-updated', {
-      timestamp,
-      status: 'in-progress',
-      callerNumber,
-      activePersonality: currentPersonality.name
-    });
+    // Initialize call events
+    await CallEventManager.initializeCall(
+      { callSid, callerNumber, timestamp, personality: currentPersonality.name },
+      currentPersonality
+    );
 
     // Return TwiML response with forwarding instructions
     return createTwiMLResponse(twiml.toString());

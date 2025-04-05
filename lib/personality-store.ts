@@ -1,32 +1,53 @@
 import { SayVoice } from 'twilio/lib/twiml/VoiceResponse';
+import { VoiceConfig } from './voice-processing';
 
-type SafetySetting = {
+/**
+ * AI model safety settings for content filtering
+ */
+export type SafetySetting = {
   category: 'HARM_CATEGORY_HARASSMENT' | 'HARM_CATEGORY_HATE_SPEECH' | 'HARM_CATEGORY_SEXUALLY_EXPLICIT' | 'HARM_CATEGORY_DANGEROUS_CONTENT';
   threshold: 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_ONLY_HIGH';
 };
 
+/**
+ * Example conversation for personality training
+ */
+export interface ConversationExample {
+  input: string;
+  response: string;
+}
+
+/**
+ * Configuration for an AI personality
+ */
 export interface AIPersonalityConfig {
   name: string;
   systemPrompt: string;
   voiceId: string; // Google Cloud TTS voice name
-  voiceConfig: {
-    languageCode: string;
-    name: string;
-    ssmlGender: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  };
+  voiceConfig: VoiceConfig;
   traits: string[];
   safetySettings?: SafetySetting[];
   temperature?: number;
-  examples?: Array<{
-    input: string;
-    response: string;
-  }>;
+  examples?: ConversationExample[];
 }
 
+/**
+ * Events emitted by the personality store
+ */
+export type PersonalityEvent = {
+  type: 'personality-changed';
+  id: string;
+  name: string;
+};
+
+/**
+ * Manages AI personalities and their configurations
+ */
 class PersonalityStore {
   private personalities: Map<string, AIPersonalityConfig>;
   private defaultPersonality: AIPersonalityConfig;
   private currentPersonality: string = 'casual';
+  private eventListeners: ((event: PersonalityEvent) => void)[] = [];
 
   constructor() {
     this.personalities = new Map();
@@ -129,7 +150,17 @@ class PersonalityStore {
     });
   }
 
-  public registerPersonality(id: string, config: Partial<AIPersonalityConfig>) {
+  /**
+   * Register a new personality or update an existing one
+   * @param id Unique identifier for the personality
+   * @param config Personality configuration (partial, will be merged with defaults)
+   * @returns The complete personality configuration
+   */
+  public registerPersonality(id: string, config: Partial<AIPersonalityConfig>): AIPersonalityConfig {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Personality ID must be a non-empty string');
+    }
+
     const fullConfig: AIPersonalityConfig = {
       ...this.defaultPersonality,
       ...config,
@@ -137,32 +168,146 @@ class PersonalityStore {
     };
 
     this.personalities.set(id, fullConfig);
+    return fullConfig;
   }
 
+  /**
+   * Get a personality by ID
+   * @param id Personality identifier
+   * @returns The personality configuration or default if not found
+   */
   public getPersonality(id: string): AIPersonalityConfig {
+    if (!id) return this.defaultPersonality;
     return this.personalities.get(id) || this.defaultPersonality;
   }
 
+  /**
+   * Get the currently active personality
+   * @returns The current personality configuration
+   */
   public getCurrentPersonality(): AIPersonalityConfig {
     return this.getPersonality(this.currentPersonality);
   }
 
+  /**
+   * Set the current active personality
+   * @param id Personality identifier
+   * @returns True if successful, false if personality not found
+   */
   public setCurrentPersonality(id: string): boolean {
-    if (this.personalities.has(id)) {
-      this.currentPersonality = id;
-      return true;
+    if (!id || !this.personalities.has(id)) {
+      console.warn(`Personality '${id}' not found, using default`);
+      return false;
     }
-    return false;
+    
+    const previousId = this.currentPersonality;
+    this.currentPersonality = id;
+    
+    // Notify listeners of the change
+    const personality = this.getPersonality(id);
+    this.notifyListeners({
+      type: 'personality-changed',
+      id,
+      name: personality.name
+    });
+    
+    console.log(`Personality changed from '${previousId}' to '${id}'`);
+    return true;
   }
 
+  /**
+   * Get a list of all available personality IDs
+   * @returns Array of personality identifiers
+   */
   public listPersonalities(): string[] {
     return Array.from(this.personalities.keys());
   }
 
-  public updatePersonality(id: string, updates: Partial<AIPersonalityConfig>) {
+  /**
+   * Get all personality configurations
+   * @returns Map of personality IDs to configurations
+   */
+  public getAllPersonalities(): Map<string, AIPersonalityConfig> {
+    return new Map(this.personalities);
+  }
+
+  /**
+   * Update an existing personality
+   * @param id Personality identifier
+   * @param updates Partial updates to apply
+   * @returns Updated personality or null if not found
+   */
+  public updatePersonality(id: string, updates: Partial<AIPersonalityConfig>): AIPersonalityConfig | null {
+    if (!id || !this.personalities.has(id)) {
+      console.warn(`Cannot update: Personality '${id}' not found`);
+      return null;
+    }
+    
     const current = this.getPersonality(id);
-    this.personalities.set(id, { ...current, ...updates });
+    const updated = { ...current, ...updates };
+    this.personalities.set(id, updated);
+    
+    // If this is the current personality, notify listeners
+    if (id === this.currentPersonality) {
+      this.notifyListeners({
+        type: 'personality-changed',
+        id,
+        name: updated.name
+      });
+    }
+    
+    return updated;
+  }
+
+  /**
+   * Delete a personality
+   * @param id Personality identifier
+   * @returns True if deleted, false if not found
+   */
+  public deletePersonality(id: string): boolean {
+    if (!id || !this.personalities.has(id)) {
+      return false;
+    }
+    
+    // Don't allow deleting the current personality
+    if (id === this.currentPersonality) {
+      console.warn(`Cannot delete the currently active personality: '${id}'`);
+      return false;
+    }
+    
+    return this.personalities.delete(id);
+  }
+
+  /**
+   * Add an event listener for personality changes
+   * @param listener Function to call when events occur
+   */
+  public addEventListener(listener: (event: PersonalityEvent) => void): void {
+    this.eventListeners.push(listener);
+  }
+
+  /**
+   * Remove an event listener
+   * @param listener Function to remove
+   */
+  public removeEventListener(listener: (event: PersonalityEvent) => void): void {
+    this.eventListeners = this.eventListeners.filter(l => l !== listener);
+  }
+
+  /**
+   * Notify all listeners of an event
+   * @param event Event to broadcast
+   */
+  private notifyListeners(event: PersonalityEvent): void {
+    this.eventListeners.forEach(listener => {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error('Error in personality event listener:', error);
+      }
+    });
   }
 }
 
+// Export a singleton instance of the personality store
 export const personalityStore = new PersonalityStore();
