@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     // Play the AI response
     gather.say({
       language: 'en-US',
-      voice: currentPersonality.voiceId
+      voice: 'woman' // Use a standard Twilio voice that's compatible with TypeScript definitions
     }, response);
 
     return new NextResponse(twiml.toString(), {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const twiml = new VoiceResponse();
     twiml.say({
       language: 'en-US',
-      voice: 'en-US-Neural2-D'
+      voice: 'woman' // Use a standard Twilio voice that's compatible with TypeScript definitions
     }, 'I apologize, but I encountered an error. Could you please repeat that?');
 
     return new NextResponse(twiml.toString(), {

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
       // Use the audio URL in TwiML response
       // Note: Using say with a standard voice as a fallback, but the audio quality will come from the pre-generated Studio voice
-      response.say({ voice: 'Polly.Matthew' }, noInputMessage);
+      response.say({ voice: 'woman' }, noInputMessage);
 
       return new NextResponse(response.toString(), {
         headers: { 'Content-Type': 'text/xml' }

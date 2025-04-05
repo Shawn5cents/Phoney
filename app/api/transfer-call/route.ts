@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
-import { amazonConnectConfig } from '@/lib/amazon-connect';
 
 // Import Twilio using require to avoid TypeScript issues
 const twilio = require('twilio');
@@ -30,18 +29,23 @@ export async function POST(request: Request) {
     );
     
     // Handle different transfer types
-    if (transferType === 'connect-internal') {
-      // This is for transfers within Amazon Connect
-      // We'll just notify Amazon Connect about the transfer request
-      // The actual transfer happens within Amazon Connect
+    if (transferType === 'internal') {
+      // Internal transfer to another department or agent
+      console.log(`Internal transfer requested to ${transferNumber}`);
       
-      // No need to update the Twilio call, just notify about the transfer
-      console.log(`Internal Amazon Connect transfer requested to ${transferNumber}`);
+      // Use a special greeting for internal transfers
+      twimlResponse.say(
+        { voice: 'woman' },
+        'Transferring you to an internal department. Please hold.'
+      );
     } 
-    else if (transferType === 'connect-queue') {
-      // Transfer to an Amazon Connect queue
-      console.log(`Amazon Connect queue transfer requested to ${transferNumber}`);
-      // Similar to internal transfer, this happens within Amazon Connect
+    else if (transferType === 'queue') {
+      // Transfer to a queue
+      console.log(`Queue transfer requested to ${transferNumber}`);
+      twimlResponse.say(
+        { voice: 'woman' },
+        'Transferring you to a queue. Your call is important to us.'
+      );
     }
     else {
       // Standard external transfer using Twilio
@@ -72,15 +76,15 @@ export async function POST(request: Request) {
         transferredTo: transferNumber,
         transferType,
         timestamp: new Date().toISOString(),
-        // Include info about whether this was handled by Amazon Connect
-        handledBy: transferType.startsWith('connect') ? 'Amazon Connect' : 'Twilio'
+        // Always handled by Twilio
+        handledBy: 'Twilio'
       }),
       // Notify the main calls channel
       pusherServer.trigger('calls', 'call.transferred', {
         callId: callSid,
         transferredTo: transferNumber,
         transferType,
-        handledBy: transferType.startsWith('connect') ? 'Amazon Connect' : 'Twilio'
+        handledBy: 'Twilio'
       })
     ]);
     

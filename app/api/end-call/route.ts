@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     // End the call using Twilio's API
     const voiceResponse = new VoiceResponse();
     voiceResponse.say({
-      voice: 'en-US-Neural2-D',
+      voice: 'woman', // Use a standard Twilio voice that's compatible with TypeScript definitions
       language: 'en-US'
     }, 'Thank you for calling. Goodbye.');
 
