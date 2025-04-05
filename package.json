@@ -9,10 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google-cloud/speech": "^7.0.1",
     "@google-cloud/text-to-speech": "^6.0.1",
     "@google/generative-ai": "^0.24.0",
     "@twilio/voice-sdk": "^2.12.4",
-    "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.0",
@@ -29,6 +29,8 @@
   },
   "devDependencies": {
     "@tailwindcss/language-server": "^0.14.13",
+    "@types/node": "^22.14.0",
+    "@types/ws": "^8.18.1",
     "sharp": "^0.33.5"
   }
 }

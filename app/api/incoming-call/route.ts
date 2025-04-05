@@ -1,74 +1,100 @@
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
+import { personalityStore } from '@/lib/personality-store';
+import { headers } from 'next/headers';
 
 const { VoiceResponse } = twilio.twiml;
 
-// Last updated: 2025-04-04 23:56
 export async function POST(request: Request) {
   console.log('=== START INCOMING CALL HANDLER ===');
-  console.log(`Timestamp: ${new Date().toISOString()}`);
-  console.log('SIMPLIFIED VERSION FOR DEBUGGING');
+  const timestamp = new Date().toISOString();
   
   try {
-    console.log('Parsing incoming call data...');
     const formData = await request.formData();
     const callerNumber = formData.get('From') as string;
     const callSid = formData.get('CallSid') as string;
+    
     console.log('Call from:', callerNumber, 'SID:', callSid);
 
-    // Notify dashboard of new call
+    // Get host for WebSocket connection
+    const host = headers().get('host') || '';
+    const protocol = process.env.NODE_ENV === 'development' ? 'ws' : 'wss';
+    const wsUrl = `${protocol}://${host}/api/audio-stream?callSid=${callSid}`;
+
+    // Initialize call in Pusher
     try {
-      // Notify the main dashboard channel
+      // Set initial personality
+      const defaultPersonality = personalityStore.getPersonality('professional');
+
       await pusherServer.trigger('calls', 'call.started', {
         callId: callSid,
-        caller: callerNumber
+        caller: callerNumber,
+        timestamp,
+        personality: 'professional'
       });
 
-      // Notify the specific call channel
-      await pusherServer.trigger(`call-${callSid}`, 'call.started', {
-        callId: callSid,
-        caller: callerNumber,
+      await pusherServer.trigger(`call-${callSid}`, 'call.initialized', {
         status: 'active',
-        timestamp: new Date().toISOString()
+        wsUrl,
+        timestamp,
+        personality: defaultPersonality.name
       });
-      console.log('Dashboard notified successfully');
-    } catch (pusherError) {
-      console.error('Dashboard notification failed:', pusherError);
+
+      console.log('Call initialization successful');
+    } catch (error) {
+      console.error('Pusher notification failed:', error);
       // Continue with call even if notification fails
     }
-    
-    console.log('Creating ULTRA SIMPLE TwiML response...');
+
     const twiml = new VoiceResponse();
     
-    // IMPROVED APPROACH: Make gather the top-level verb
-    // Speech recognition works better when the gather is the top-level verb
+    // Start media stream for real-time audio processing
+    const connect = twiml.connect();
+    connect.stream({
+      name: 'Audio Stream',
+      url: wsUrl,
+      track: 'inbound_track'
+    });
+
+    // Set up initial voice interaction
     const gather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
-      timeout: 15,              // Give more time to start speaking
-      speechTimeout: 'auto',    // Auto-detect end of speech
-      speechModel: 'phone_call',// Phone-optimized model
-      enhanced: true,          // Better recognition quality
-      profanityFilter: false,   // Capture everything
-      language: 'en-US',       // Specify language
-      hints: 'hello, hi, yes, no, help, Shawn' // Common words to help recognition
+      speechTimeout: 'auto',
+      speechModel: 'phone_call',
+      enhanced: true,
+      profanityFilter: false,
+      language: 'en-US',
+      hints: [
+        'hello',
+        'hi',
+        'yes',
+        'no',
+        'help',
+        'transfer',
+        'operator',
+        'goodbye'
+      ].join(', ')
     });
-    
-    // Put greeting inside the gather
-    gather.say({
-      voice: 'man',
-      language: 'en-US'
-    }, 'Hello, this is Phoney Assistant. How can I help you today?');
-    
-    // Add a fallback for no input
-    twiml.say('I didn\'t hear anything. Goodbye.');
-    
-    // Convert to string and log
-    const response = twiml.toString();
-    console.log('ULTRA SIMPLE TwiML:', response);
 
+    // Initial greeting with personality-specific voice
+    const personality = personalityStore.getPersonality('professional');
+    gather.say({
+      voice: personality.voiceId,
+      language: 'en-US'
+    }, `${personality.name} here. How may I assist you today?`);
+
+    // Fallback for no input
+    twiml.say({
+      voice: personality.voiceId,
+      language: 'en-US'
+    }, "I didn't catch that. Please try again.");
+
+    // Log the generated TwiML for debugging
+    const response = twiml.toString();
+    console.log('Generated TwiML:', response);
 
     return new NextResponse(response, {
       headers: { 
@@ -84,23 +110,22 @@ export async function POST(request: Request) {
     
     try {
       const twiml = new VoiceResponse();
-      
-      // Skip trying to use advanced TTS in error handler to avoid recursion
-      // Just use Twilio's built-in TTS which is more reliable
-      twiml.say('I apologize, but I encountered a technical issue. Please try your call again.');
+      twiml.say({
+        voice: 'en-US-Neural2-D',
+        language: 'en-US'
+      }, 'I apologize, but I encountered a technical issue. Please try your call again.');
       
       return new NextResponse(twiml.toString(), {
         headers: { 'Content-Type': 'text/xml; charset=utf-8' },
       });
     } catch (twimlError) {
       console.error('Failed to generate error TwiML:', twimlError);
-      return new NextResponse('<Response><Say>A system error occurred. Please try again.</Say></Response>', {
-        headers: { 'Content-Type': 'text/xml; charset=utf-8' },
-      });
+      return new NextResponse(
+        '<Response><Say>A system error occurred. Please try again.</Say></Response>', 
+        { headers: { 'Content-Type': 'text/xml; charset=utf-8' } }
+      );
     }
-  }
-  finally {
-    console.log('Response sent, ending call handler');
+  } finally {
     console.log('=== END INCOMING CALL HANDLER ===');
   }
 }

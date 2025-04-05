@@ -157,3 +157,78 @@ Each personality has its own:
 - Voice settings
 - Example interactions
 - Response style
+
+## 🚀 Enhanced Architecture Analysis
+
+### AI Response Generation Flow
+```mermaid
+sequenceDiagram
+    participant C as Caller
+    participant T as Twilio
+    participant N as Next.js
+    participant G as Google AI
+    participant P as Pusher
+    
+    C->>T: Initiate Call
+    T->>N: POST /api/incoming-call
+    N->>P: Trigger 'call.start'
+    P-->>H: Update Dashboard
+    N->>G: Generate Greeting
+    G-->>N: Text Response
+    N->>T: Return TwiML
+    T->>C: Play Greeting
+    loop Interaction
+        C->>T: Speech Input
+        T->>N: POST /api/process-speech
+        N->>G: Analyze Input
+        G-->>N: AI Response
+        N->>P: Update Call State
+        N->>T: Response TwiML
+        T->>C: Play Response
+    end
+```
+
+### Personality Configuration Details
+```typescript
+// From lib/ai-personalities.ts
+export interface AIPersonality {
+  name: string;
+  description: string;
+  systemPrompt: string;
+  voiceId: string;
+  traits: string[];
+  examples: {
+    input: string;
+    response: string;
+  }[];
+}
+```
+
+### Real-Time Call Handling Metrics
+| Metric                | Target Value       | Monitoring Method       |
+|-----------------------|--------------------|-------------------------|
+| Call Answer Time      | <2 seconds         | Twilio Insights         |
+| AI Response Latency   | <1.5 seconds       | Custom Performance Mark |
+| Speech Recognition    | >95% accuracy      | Google Speech API       |
+| Real-time Update Delay| <200ms             | Pusher Webhooks         |
+
+## 🛠️ Error Handling Strategy
+```mermaid
+graph LR
+    A[Call Error] --> B{Error Type?}
+    B -->|Network| C[Retry 3x]
+    B -->|API Limit| D[Queue & Delay]
+    B -->|AI Failure| E[Fallback Personality]
+    B -->|TTS Error| F[Use Twilio TTS]
+    C --> G[Log & Alert]
+    D --> G
+    E --> G
+    F --> G
+```
+
+## 🔮 Future Enhancement Pipeline
+1. Personality Blending Engine
+2. Multi-language Support Matrix
+3. Call Sentiment Analysis Integration
+4. Visual Call Flow Editor
+5. Enterprise SSO Integration
