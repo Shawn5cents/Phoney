@@ -21,6 +21,7 @@ export interface AIPersonalityConfig {
 class PersonalityStore {
   private personalities: Map<string, AIPersonalityConfig>;
   private defaultPersonality: AIPersonalityConfig;
+  private currentPersonality: string = 'professional';
 
   constructor() {
     this.personalities = new Map();
@@ -103,6 +104,18 @@ class PersonalityStore {
 
   public getPersonality(id: string): AIPersonalityConfig {
     return this.personalities.get(id) || this.defaultPersonality;
+  }
+
+  public getCurrentPersonality(): AIPersonalityConfig {
+    return this.getPersonality(this.currentPersonality);
+  }
+
+  public setCurrentPersonality(id: string): boolean {
+    if (this.personalities.has(id)) {
+      this.currentPersonality = id;
+      return true;
+    }
+    return false;
   }
 
   public listPersonalities(): string[] {

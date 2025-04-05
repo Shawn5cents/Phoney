@@ -14,7 +14,7 @@ export class GeminiStream {
   private model: GenerativeModel;
   private context: string[];
   private personality: StreamOptions['personality'];
-  private chat: any; // Will be properly typed once chat feature is available
+  private chat: any;
 
   private constructor(model: GenerativeModel, options: StreamOptions) {
     this.model = model;
@@ -32,25 +32,7 @@ export class GeminiStream {
         topP: 0.8,
         topK: 40,
         maxOutputTokens: 200,
-      },
-      safetySettings: [
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-      ],
+      }
     });
 
     const instance = new GeminiStream(model, options);
@@ -59,7 +41,6 @@ export class GeminiStream {
   }
 
   private async initializeChat() {
-    // Initialize chat with system prompt and context
     const systemPrompt = `${this.personality.systemPrompt}\n\nYou are an AI assistant with these traits: ${this.personality.traits.join(', ')}. 
     Respond naturally in a conversational style while maintaining the personality traits above.
     Keep responses concise and focused.
@@ -101,10 +82,8 @@ export class GeminiStream {
   public async streamResponse(input: string, onChunk: (chunk: string) => void): Promise<void> {
     try {
       const result = await this.chat.sendMessageStream(input);
-
       for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        onChunk(chunkText);
+        onChunk(chunk.text());
       }
     } catch (error) {
       console.error('Error streaming response:', error);
@@ -117,7 +96,14 @@ export class GeminiStream {
   }
 
   public close() {
-    // Cleanup resources if needed
     this.chat = null;
   }
+}
+
+export async function streamGeminiResponse(input: string, context: string[], personality: any): Promise<string> {
+  const stream = await GeminiStream.create({
+    personality,
+    context
+  });
+  return stream.generateResponse(input);
 }

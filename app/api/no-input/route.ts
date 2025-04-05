@@ -1,76 +1,79 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
-import { generateSpeech, streamToTwilio } from '@/lib/google-advanced-tts';
+import { generateSpeech, getVoiceOptions } from '@/lib/google-advanced-tts';
 
 const { VoiceResponse } = twilio.twiml;
 
 export async function POST(request: Request) {
-  console.log('=== START NO INPUT HANDLER ===');
-  console.log(`Timestamp: ${new Date().toISOString()}`);
-  
   try {
-    const twiml = new VoiceResponse();
+    const formData = await request.formData();
+    const callSid = formData.get('CallSid');
     
-    // Generate follow-up audio
+    if (!callSid) {
+      return new NextResponse('Missing CallSid', { status: 400 });
+    }
+
+    const twiml = new VoiceResponse();
+
     try {
-      const followUpAudio = await generateSpeech('Hello? Anyone there? I can help you if you need assistance.', {
-        personalityType: 'PROFESSIONAL',
-        gender: 'MALE'
-      });
+      // Generate a follow-up prompt using TTS
+      const followUpText = "I didn't hear you. Could you please speak again?";
+      const voiceOptions = getVoiceOptions('professional');
+      const followUpAudio = await generateSpeech(followUpText, voiceOptions);
 
       // Start gathering speech after follow-up
       const gather = twiml.gather({
         input: ['speech'],
         action: '/api/process-speech',
         method: 'POST',
-        timeout: 15,  // Give more time on follow-up
-        speechTimeout: 'auto',
-        speechModel: 'phone_call',
-        enhanced: true,
-        profanityFilter: false,
-        language: 'en-US'
+        timeout: 5,
+        speechTimeout: 'auto'
       });
-      
-      gather.play(await streamToTwilio(followUpAudio));
-      
+
+      // Add the audio prompt using say with proper voice settings
+      gather.say({
+        language: voiceOptions.languageCode,
+        voice: voiceOptions.name
+      }, followUpText);
+
       // If still no input after this, end the call
-      twiml.say('I haven\'t heard anything. Please call back when you\'re ready to talk. Goodbye.');
-      twiml.hangup();
+      twiml.say({
+        language: voiceOptions.languageCode,
+        voice: voiceOptions.name
+      }, "I haven't heard anything. Please call back when you're ready to talk. Goodbye.");
+
+      return new NextResponse(twiml.toString(), {
+        headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+      });
+    } catch (audioError) {
+      console.error('Error generating audio:', audioError);
       
-    } catch (speechError) {
-      console.error('Error generating follow-up speech:', speechError);
       // Fall back to basic TTS
       const gather = twiml.gather({
         input: ['speech'],
         action: '/api/process-speech',
         method: 'POST',
-        timeout: 15,  // Give more time on follow-up
-        speechTimeout: 'auto',
-        speechModel: 'phone_call',
-        enhanced: true,
-        profanityFilter: false,
-        language: 'en-US'
+        timeout: 5,
+        speechTimeout: 'auto'
       });
-      gather.say('Hello? Is anyone there? I can help you if you need assistance.');
-      
-      // If still no input, end call
-      twiml.say('I haven\'t heard anything. Please call back when you\'re ready to talk. Goodbye.');
-      twiml.hangup();
-    }
 
-    return new NextResponse(twiml.toString(), {
-      headers: { 
-        'Content-Type': 'text/xml; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-    });
+      // Use basic voice settings for fallback
+      gather.say({
+        language: 'en-US',
+        voice: 'en-US-Neural2-D'
+      }, 'Hello? Is anyone there? I can help you if you need assistance.');
+
+      return new NextResponse(twiml.toString(), {
+        headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+      });
+    }
   } catch (error) {
     console.error('Error in no-input handler:', error);
     const twiml = new VoiceResponse();
-    twiml.say('I apologize, but I encountered a technical issue. Please try your call again.');
-    twiml.hangup();
+    twiml.say({
+      language: 'en-US',
+      voice: 'en-US-Neural2-D'
+    }, 'Sorry, something went wrong. Please try again.');
     
     return new NextResponse(twiml.toString(), {
       headers: { 'Content-Type': 'text/xml; charset=utf-8' },
