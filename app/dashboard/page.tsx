@@ -16,19 +16,28 @@ export default function DashboardPage() {
 
   // Listen for new calls
   useEffect(() => {
-    const channel = pusherClient.subscribe('calls');
+    // Subscribe to main calls channel
+    const mainChannel = pusherClient.subscribe('calls');
 
-    channel.bind('call.started', (data: { callId: string }) => {
+    mainChannel.bind('call.started', (data: { callId: string, caller: string }) => {
       console.log('New call received:', data);
       setActiveCallId(data.callId);
     });
 
-    channel.bind('call.ended', (data: { callId: string }) => {
-      console.log('Call ended:', data);
-      if (data.callId === activeCallId) {
+    // If there's an active call, subscribe to its specific channel
+    if (activeCallId) {
+      const callChannel = pusherClient.subscribe(`call-${activeCallId}`);
+
+      callChannel.bind('call.ended', () => {
+        console.log('Call ended:', activeCallId);
         setActiveCallId(undefined);
-      }
-    });
+      });
+
+      return () => {
+        pusherClient.unsubscribe(`call-${activeCallId}`);
+        pusherClient.unsubscribe('calls');
+      };
+    }
 
     return () => {
       pusherClient.unsubscribe('calls');
