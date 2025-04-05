@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
 import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
-import { generateGeminiResponse } from '@/lib/gemini';
+import { streamGeminiResponse } from '@/lib/gemini';
 import { personalities } from '@/lib/ai-personalities';
 // Import initialization to ensure speech cache is ready
 import { ensureInitialized } from '../_init';
@@ -65,8 +65,18 @@ Assistant: "I get that, but I handle all his calls now. I can help or have him c
 Current conversation:
 User: ${speechResult}
 Assistant:`;
-    const aiResponse = await generateGeminiResponse(prompt);
-    console.log('AI response:', aiResponse);
+    // Generate AI response using streaming
+    let aiResponse = '';
+    for await (const chunk of streamGeminiResponse(prompt)) {
+      aiResponse += chunk;
+      // Send partial response through Pusher for real-time UI updates
+      await pusherServer.trigger(`call-${callSid}`, 'partial-response', {
+        text: chunk,
+        sender: 'ai',
+        timestamp: new Date().toISOString(),
+      });
+    }
+    console.log('Complete AI response:', aiResponse);
     
     // Update transcript
     try {
