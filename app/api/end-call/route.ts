@@ -1,34 +1,35 @@
 import { NextResponse } from 'next/server';
-import twilio from 'twilio';
+import * as Twilio from 'twilio';
 import { pusherServer } from '@/lib/pusher';
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// Initialize the Twilio client using the class constructor
+const client = new (Twilio as any)(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_API_KEY_SECRET!
+);
+const { VoiceResponse } = Twilio.twiml;
 
 export async function POST(request: Request) {
   const { callSid } = await request.json();
 
   try {
-    // End the call gracefully
+    // End the call using Twilio's API
+    const voiceResponse = new VoiceResponse();
+    voiceResponse.say({
+      voice: 'en-US-Neural2-D',
+      language: 'en-US'
+    }, 'Thank you for calling. Goodbye.');
+
     await client.calls(callSid)
       .update({
-        twiml: new twilio.twiml.VoiceResponse()
-          .say('Thank you for calling. Goodbye.')
-          .hangup()
-          .toString()
+        twiml: voiceResponse.toString()
       });
 
-    // Notify both channels that the call has ended
-    await Promise.all([
-      // Notify the specific call channel
-      pusherServer.trigger(`call-${callSid}`, 'call.ended', {
-        callId: callSid,
-        timestamp: new Date().toISOString()
-      }),
-      // Notify the main calls channel
-      pusherServer.trigger('calls', 'call.ended', {
-        callId: callSid
-      })
-    ]);
+    // Notify dashboard of call end
+    await pusherServer.trigger(`call-${callSid}`, 'call.ended', {
+      callSid,
+      timestamp: new Date().toISOString()
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
