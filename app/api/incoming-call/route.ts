@@ -100,9 +100,12 @@ export async function POST(request: Request) {
         input: ['speech'],
         action: '/api/process-speech',
         method: 'POST',
-        speechTimeout: 'auto',
+        timeout: 10,  // Wait up to 10 seconds for input to begin
+        speechTimeout: 'auto',  // Wait for natural pause in speech
         speechModel: 'phone_call',
-        enhanced: true
+        enhanced: true,
+        profanityFilter: false,  // Don't filter any speech
+        language: 'en-US'
       });
 
       // Play initial hello within gather

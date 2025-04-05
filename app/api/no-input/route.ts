@@ -23,9 +23,12 @@ export async function POST(request: Request) {
         input: ['speech'],
         action: '/api/process-speech',
         method: 'POST',
+        timeout: 15,  // Give more time on follow-up
         speechTimeout: 'auto',
         speechModel: 'phone_call',
-        enhanced: true
+        enhanced: true,
+        profanityFilter: false,
+        language: 'en-US'
       });
       
       gather.play(await streamToTwilio(followUpAudio));
@@ -41,9 +44,12 @@ export async function POST(request: Request) {
         input: ['speech'],
         action: '/api/process-speech',
         method: 'POST',
+        timeout: 15,  // Give more time on follow-up
         speechTimeout: 'auto',
         speechModel: 'phone_call',
-        enhanced: true
+        enhanced: true,
+        profanityFilter: false,
+        language: 'en-US'
       });
       gather.say('Hello? Is anyone there? I can help you if you need assistance.');
       
