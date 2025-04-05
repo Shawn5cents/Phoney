@@ -12,6 +12,7 @@
     "@google-cloud/speech": "^7.0.1",
     "@google-cloud/text-to-speech": "^6.0.1",
     "@google/generative-ai": "^0.24.0",
+    "@twilio/conversations": "^2.6.2",
     "@twilio/voice-sdk": "^2.12.4",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
