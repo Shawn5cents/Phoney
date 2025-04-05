@@ -8,6 +8,9 @@ import { ensureInitialized } from '../_init';
 
 const { VoiceResponse } = twilio.twiml;
 
+// Keep track of call state
+const activeCallsMap = new Map<string, boolean>();
+
 // Last updated: 2025-04-03 14:27
 export async function POST(request: Request) {
   console.log('=== START INCOMING CALL HANDLER ===');
@@ -60,84 +63,34 @@ export async function POST(request: Request) {
     console.log('Creating TwiML response...');
     const twiml = new VoiceResponse();
     
-    console.log('=== GENERATING GREETING ===');
-    console.log('Using optimized voice settings with PROFESSIONAL personality');
-    console.log('About to call generateSpeech with text: "Hello?"');
+    // SIMPLIFIED APPROACH: Use basic TTS for reliability
+    const gather = twiml.gather({
+      input: ['speech'],
+      action: '/api/process-speech',
+      method: 'POST',
+      timeout: 10,
+      speechTimeout: 'auto',
+      speechModel: 'phone_call',
+      enhanced: true,
+      language: 'en-US'
+    });
     
-    // Use consistent voice with professional personality settings
-    try {
-      console.log('Calling generateSpeech...');
-      const welcomeAudio = await generateSpeech('Hello?', {
-        personalityType: 'PROFESSIONAL',
-        gender: 'MALE'
-        // Using personality defaults for all other settings
-      });
-      console.log('generateSpeech completed successfully');
-      console.log('Audio URL type:', typeof welcomeAudio, 'Length:', welcomeAudio.length);
-      console.log('Audio URL preview:', welcomeAudio.substring(0, 50) + '...');
-      
-      // Check if we got a TwiML response directly
-      if (welcomeAudio.startsWith('<Response>')) {
-        console.log('Received direct TwiML response, returning it');
-        return new NextResponse(welcomeAudio, {
-          headers: { 
-            'Content-Type': 'text/xml; charset=utf-8',
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
-        });
-      }
+    // Use simple TTS for greeting
+    gather.say({
+      voice: 'man',
+      language: 'en-US'
+    }, 'Hello, this is Phoney Assistant. How can I help you today?');
     
-      const audioUrl = await streamToTwilio(welcomeAudio);
-      console.log('=== AUDIO URL DETAILS ===');
-      console.log('Audio URL to play type:', typeof audioUrl);
-      console.log('Audio URL to play length:', audioUrl.length);
-      console.log('Audio URL to play preview:', audioUrl.substring(0, 50) + '...');
+    // Handle no input
+    twiml.say({
+      voice: 'man',
+      language: 'en-US'
+    }, 'I didn\'t hear anything. Please call back when you\'re ready to talk.');
     
-      // Start gathering speech immediately after greeting
-      const gather = twiml.gather({
-        input: ['speech'],
-        action: '/api/process-speech',
-        method: 'POST',
-        timeout: 10,  // Wait up to 10 seconds for input to begin
-        speechTimeout: 'auto',  // Wait for natural pause in speech
-        speechModel: 'phone_call',
-        enhanced: true,
-        profanityFilter: false,  // Don't filter any speech
-        language: 'en-US'
-      });
-
-      // Play initial hello within gather
-      console.log('Adding play command to TwiML within gather');
-      gather.play(audioUrl);
-
-      // Add a no-input handler with follow-up
-      twiml.redirect({
-        method: 'POST'
-      }, '/api/no-input');
-    } catch (speechError) {
-      console.error('Error generating or streaming speech:', speechError);
-      // Fall back to basic TwiML if TTS fails
-      console.log('Falling back to basic TwiML Say verb');
-      const gather = twiml.gather({
-        input: ['speech'],
-        action: '/api/process-speech',
-        method: 'POST',
-        speechTimeout: 'auto',
-        speechModel: 'phone_call',
-        enhanced: true
-      });
-      gather.say('Hello? This is an automated assistant. How can I help you today?');
-      
-      // Add a no-input handler
-      twiml.redirect({
-        method: 'POST'
-      }, '/api/no-input');
-    }
-    
+    // Log the TwiML we're sending
     const response = twiml.toString();
     console.log('Generated TwiML:', response);
+
 
     return new NextResponse(response, {
       headers: { 

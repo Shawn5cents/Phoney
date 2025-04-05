@@ -140,15 +140,30 @@ Assistant:`;
     // Add another pause
     twiml.pause({ length: 1 });
     
-    // Set up next speech gathering
-    twiml.gather({
+    // Set up next speech gathering - CRITICAL for keeping call alive
+    const nextGather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
       speechTimeout: 'auto',
       language: 'en-US',
-      timeout: 5,
+      timeout: 10,  // Longer timeout to prevent dropping call
     });
+    
+    // Add a simple prompt to gather more input
+    nextGather.say({
+      voice: 'man',
+      language: 'en-US'
+    }, 'Anything else I can help with?');
+    
+    // Add a fallback if no input
+    twiml.say({
+      voice: 'man',
+      language: 'en-US'
+    }, 'Thank you for calling. Goodbye.');
+    
+    // Log this call to ensure it's being processed
+    console.log(`Processing speech for call ${callSid} complete. Waiting for next input.`);
 
     const response = twiml.toString();
     console.log('TwiML Response:', response);
