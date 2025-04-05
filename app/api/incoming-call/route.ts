@@ -5,7 +5,6 @@ import { personalityStore } from '@/lib/personality-store';
 import { headers } from 'next/headers';
 import { generateSpeech } from '@/lib/google-advanced-tts';
 import { GoogleTTSVoice } from '@/types/voice-types';
-import { twiml } from 'twilio';
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -99,8 +98,8 @@ export async function POST(request: Request) {
       enhanced: true
     });
     
-    // Play the generated audio
-    gather.say({ voice: 'alice' }, welcomeMessage);
+    // Play the generated audio using TwiML
+    gather.say({}, welcomeMessage);
 
     // Initialize call in Pusher
     await pusherServer.trigger('calls', 'call-started', {
