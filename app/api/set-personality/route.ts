@@ -1,24 +1,35 @@
 import { NextResponse } from 'next/server';
-import { personalities } from '@/lib/ai-personalities';
-import { setCurrentPersonality } from '@/lib/personality-store';
+import { personalityStore } from '@/lib/personality-store';
 
 export async function POST(request: Request) {
   try {
     const { personalityId } = await request.json();
 
-    if (!personalities[personalityId]) {
+    if (!personalityId) {
+      return NextResponse.json(
+        { error: 'Missing personalityId' },
+        { status: 400 }
+      );
+    }
+
+    const success = personalityStore.setCurrentPersonality(personalityId);
+
+    if (!success) {
       return NextResponse.json(
         { error: 'Invalid personality ID' },
         { status: 400 }
       );
     }
 
-    // Store the selected personality
-    setCurrentPersonality(personalityId);
+    const personality = personalityStore.getCurrentPersonality();
 
     return NextResponse.json({
       success: true,
-      personality: personalities[personalityId]
+      personality: {
+        id: personalityId,
+        name: personality.name,
+        traits: personality.traits
+      }
     });
   } catch (error) {
     console.error('Error setting personality:', error);
