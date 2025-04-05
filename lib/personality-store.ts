@@ -1,5 +1,9 @@
-import { HarmCategory, HarmBlockThreshold, SafetySetting } from '../types/google-ai';
 import { SayVoice } from 'twilio/lib/twiml/VoiceResponse';
+
+type SafetySetting = {
+  category: 'HARM_CATEGORY_HARASSMENT' | 'HARM_CATEGORY_HATE_SPEECH' | 'HARM_CATEGORY_SEXUALLY_EXPLICIT' | 'HARM_CATEGORY_DANGEROUS_CONTENT';
+  threshold: 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_ONLY_HIGH';
+};
 
 export interface AIPersonalityConfig {
   name: string;
@@ -30,20 +34,20 @@ class PersonalityStore {
       traits: ["Professional", "Efficient", "Helpful"],
       safetySettings: [
         {
-          category: HarmCategory.HARASSMENT,
-          threshold: HarmBlockThreshold.MEDIUM
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         },
         {
-          category: HarmCategory.HATE_SPEECH,
-          threshold: HarmBlockThreshold.MEDIUM
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         },
         {
-          category: HarmCategory.SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.MEDIUM
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         },
         {
-          category: HarmCategory.DANGEROUS,
-          threshold: HarmBlockThreshold.MEDIUM
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         }
       ],
       temperature: 0.7
