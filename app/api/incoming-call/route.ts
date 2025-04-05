@@ -47,12 +47,17 @@ export async function POST(request: Request) {
     // Add a pause
     twiml.pause({ length: 1 });
     
-    // Now gather the speech
+    // Now gather the speech with enhanced recognition settings
     const gather = twiml.gather({
       input: ['speech'],
       action: '/api/process-speech',
       method: 'POST',
-      timeout: 5
+      timeout: 10,
+      speechTimeout: 'auto',
+      speechModel: 'phone_call',
+      enhanced: true,
+      profanityFilter: false,
+      language: 'en-US'
     });
     
     // Add a prompt within the gather
