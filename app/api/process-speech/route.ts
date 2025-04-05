@@ -4,6 +4,8 @@ import { pusherServer } from '@/lib/pusher';
 import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
 import { generateGeminiResponse } from '@/lib/gemini';
 import { personalities } from '@/lib/ai-personalities';
+// Import initialization to ensure speech cache is ready
+import { ensureInitialized } from '../_init';
 
 
 
@@ -11,6 +13,16 @@ const { VoiceResponse } = twilio.twiml;
 
 export async function POST(request: Request) {
   console.log('Processing speech...');
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+  
+  // Ensure speech cache is initialized
+  try {
+    await ensureInitialized();
+    console.log('Speech cache ready for use');
+  } catch (initError) {
+    console.warn('Speech cache initialization may not be complete:', initError);
+    // Continue anyway as we have fallbacks
+  }
   
   try {
     const formData = await request.formData();

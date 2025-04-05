@@ -3,6 +3,8 @@ import { pusherServer } from '@/lib/pusher';
 import twilio from 'twilio';
 // Import the new premium voice system
 import { generateSpeech, streamToTwilio, VOICE_IDS } from '@/lib/google-advanced-tts';
+// Import initialization to ensure speech cache is ready
+import { ensureInitialized } from '../_init';
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -17,6 +19,15 @@ export async function POST(request: Request) {
     googleKeyLength: process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.length : 0,
     hasTwilioSid: !!process.env.TWILIO_ACCOUNT_SID,
   });
+  
+  // Ensure speech cache is initialized
+  try {
+    await ensureInitialized();
+    console.log('Speech cache ready for use');
+  } catch (initError) {
+    console.warn('Speech cache initialization may not be complete:', initError);
+    // Continue anyway as we have fallbacks
+  }
   
   try {
     console.log('Parsing incoming call data...');

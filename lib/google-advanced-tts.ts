@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateCacheKey, getCachedSpeech, cacheSpeech } from './speech-cache';
 
 // Initialize the Google AI client
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY!;
@@ -55,9 +56,15 @@ interface VoiceOptions {
   speed?: number;
 }
 
+// Track API usage for monitoring costs
+let apiCallCounter = 0;
+let apiCacheHits = 0;
+
 /**
  * Generates ultra-realistic speech using Google's premium TTS technology
  * Similar to the voice quality you hear in Gemini Live
+ * 
+ * Optimized with caching to reduce API costs and improve reliability
  */
 export async function generateSpeech(text: string, options: VoiceOptions = {}): Promise<string> {
   try {
@@ -65,6 +72,17 @@ export async function generateSpeech(text: string, options: VoiceOptions = {}): 
     if (!GOOGLE_API_KEY || GOOGLE_API_KEY === 'your_google_api_key_here') {
       console.error('Missing or invalid Google API key');
       throw new Error('Google API key is not properly configured');
+    }
+    
+    // Generate cache key based on text and options
+    const cacheKey = generateCacheKey(text, options);
+    
+    // Check if we have this speech already cached
+    const cachedAudio = await getCachedSpeech(cacheKey);
+    if (cachedAudio) {
+      console.log('Using cached TTS audio');
+      apiCacheHits++;
+      return cachedAudio;
     }
 
     const personality = options.personalityType || 'PROFESSIONAL';
@@ -93,7 +111,7 @@ export async function generateSpeech(text: string, options: VoiceOptions = {}): 
     // Format the prompt to request audio generation
     const prompt = `Generate high quality audio for this text: "${text}" using voice ${voiceId} with speed ${options.speed || settings.speed}. The audio should sound natural and indistinguishable from a human.`;
     
-    const result = await model.generateContent({
+    const generationResult = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         // Using proper parameter name
@@ -102,7 +120,7 @@ export async function generateSpeech(text: string, options: VoiceOptions = {}): 
     });
     
     // Extract audio data from the response
-    const response = result.response;
+    const response = generationResult.response;
     
     // Access multimedia content properly based on API structure
     const parts = response.candidates?.[0]?.content?.parts || [];
@@ -126,7 +144,18 @@ export async function generateSpeech(text: string, options: VoiceOptions = {}): 
     }
     
     // Convert to data URL format for Twilio
-    return `data:audio/mp3;base64,${audioData}`;
+    const result = `data:audio/mp3;base64,${audioData}`;
+    
+    // Save to cache for future use
+    await cacheSpeech(cacheKey, result);
+    
+    // Track API usage
+    apiCallCounter++;
+    if (apiCallCounter % 10 === 0) {
+      console.log(`TTS API Stats - Calls: ${apiCallCounter}, Cache Hits: ${apiCacheHits}, Cache Rate: ${(apiCacheHits/(apiCallCounter+apiCacheHits)*100).toFixed(1)}%`);
+    }
+    
+    return result;
   } catch (error) {
     console.error('Error generating premium speech:', error);
     console.error('Speech generation parameters:', {
