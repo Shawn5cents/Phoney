@@ -33,8 +33,11 @@ TWILIO_API_KEY_SID=your_api_key_sid
 TWILIO_API_KEY_SECRET=your_api_key_secret
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
-# Google AI Configuration
+# Google Cloud Configuration
 GOOGLE_API_KEY=your_google_api_key
+GOOGLE_PROJECT_ID=your_project_id
+GOOGLE_CLIENT_EMAIL=your_service_account_email
+GOOGLE_PRIVATE_KEY=your_service_account_private_key
 
 # Pusher Configuration (for real-time updates)
 PUSHER_APP_ID=your_pusher_app_id
@@ -45,6 +48,9 @@ PUSHER_CLUSTER=your_pusher_cluster
 # Client-side Pusher Configuration
 NEXT_PUBLIC_PUSHER_KEY=your_pusher_key
 NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
+
+# WebSocket Configuration
+NEXT_PUBLIC_WS_URL=wss://your-domain.com
 ```
 
 ## External Service Setup
@@ -54,17 +60,62 @@ NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
 - Set up a Twilio API key and secret (preferred over auth token)
 - Configure your Twilio phone number to use webhooks:
   - Voice webhook (HTTP POST): `https://your-domain.com/api/incoming-call`
+- Set up Media Streams:
+  - Enable "Process audio with WebSocket"
+  - WebSocket URL: `wss://your-domain.com/api/audio-stream`
+  - Audio Track: `inbound_track`
+  - Audio Format: MULAW, 8000Hz
 
-### 2. Pusher Configuration
+### 2. Google Cloud Setup
+- Create a Google Cloud project
+- Enable required APIs:
+  - Gemini API
+  - Cloud Speech-to-Text API
+  - Cloud Text-to-Speech API
+- Create a service account with necessary permissions
+- Download service account key
+- Configure Speech-to-Text settings:
+  - Enable streaming recognition
+  - Set up phone call model
+  - Configure enhanced models
+
+### 3. Pusher Configuration
 - Create a Pusher Channels account and app
 - Configure your app to use private channels
-- Enable client events if you need them
+- Enable client events for real-time updates
 - Note your app ID, key, secret, and cluster
+- Set up WebSocket connection limits appropriately
 
-### 3. Google API Setup
-- Create a Google Cloud project
-- Enable the Gemini API and get an API key
-- Enable the Cloud Text-to-Speech API
+## WebSocket Configuration
+
+### 1. SSL Setup for WebSocket
+```bash
+# Install SSL certificate for WSS (required for production)
+certbot certonly --nginx -d your-domain.com
+
+# Configure Nginx for WebSocket proxy
+```
+
+Example Nginx configuration:
+```nginx
+location /api/audio-stream {
+    proxy_pass http://localhost:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+}
+```
+
+### 2. WebSocket Health Checks
+```bash
+# Monitor WebSocket connections
+pm2 monit
+
+# Check WebSocket logs
+tail -f ~/.pm2/logs/phoney-out.log
+```
 
 ## Monitoring and Debugging
 
@@ -72,135 +123,125 @@ NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
 - Use Railway's built-in logs and metrics
 - Set up deployment notifications
 - Monitor resource usage
+- Track WebSocket connections
 
-### 2. Debugging Call Issues
-- Check Twilio logs for call events
-- Review application logs with timestamps
-- Use the dashboard to monitor active calls
-- Test with Twilio test credentials
+### 2. Real-time Audio Streaming
+- Monitor WebSocket connection status
+- Check audio stream quality
+- Track speech recognition accuracy
+- Monitor stream latency
 
-### 3. Real-time Updates Issues
-- Verify Pusher connection status
-- Check browser console for WebSocket errors
-- Confirm proper channel subscriptions
+### 3. Speech Recognition Monitoring
+- View real-time transcription accuracy
+- Monitor API usage and quotas
+- Track recognition latency
+- Analyze recognition errors
+
+## Performance Optimization
+
+### 1. WebSocket Performance
+- Implement connection pooling
+- Monitor connection lifecycle
+- Handle reconnection gracefully
+- Optimize packet size
+
+### 2. Speech Recognition
+- Use enhanced models for better accuracy
+- Implement proper error handling
+- Cache frequently used phrases
+- Monitor and adjust timeouts
+
+### 3. Resource Management
+- Monitor memory usage
+- Implement proper cleanup
+- Handle concurrent connections
+- Scale horizontally if needed
 
 ## Security Considerations
 
-### 1. Environment Variables
-- Store all credentials securely in Railway's environment variables
-- Never commit sensitive information to version control
-- Use an API key for Twilio instead of an auth token
+### 1. WebSocket Security
+- Implement proper authentication
+- Validate connection parameters
+- Rate limit connections
+- Monitor for abuse
 
-### 2. Pusher Security
-- Implement the Pusher auth endpoint properly
-- Validate channel access for private channels
-- Keep your Pusher secret secure
-
-### 3. API Security
-- Protect sensitive endpoints
-- Validate all incoming Twilio webhook requests
-- Implement proper error handling to avoid exposing details
-
-## Call Flow Optimization
-
-### 1. Speech Recognition
-- Use the `enhanced: true` flag for better recognition
-- Set appropriate timeout values for user speech
-- Use speech hints for common words
-- Set the proper speech model for phone calls
-
-### 2. AI Responses
-- Optimize prompts for brief, natural responses
-- Implement streaming for real-time feedback
-- Ensure proper error handling for AI requests
-- Use appropriate voice settings for clarity
+### 2. Audio Data Security
+- Implement end-to-end encryption
+- Handle data retention properly
+- Secure audio storage
+- Comply with privacy regulations
 
 ## Testing and Maintenance
 
-### 1. Testing Calls
+### 1. Testing WebSocket Connections
 ```bash
-# Use Twilio CLI to test calls
-npm install -g twilio-cli
-twilio phone-numbers:update your-twilio-number --sms-url=https://your-app.railway.app/api/incoming-call
+# Test WebSocket connection
+wscat -c wss://your-domain.com/api/audio-stream
 
-# Make a test call
-twilio api:core:calls:create --from your-twilio-number --to your-phone-number --url https://your-app.railway.app/api/incoming-call
+# Monitor connection status
+curl https://your-domain.com/api/health
 ```
 
-### 2. Updates and Maintenance
+### 2. Testing Speech Recognition
 ```bash
-# Update dependencies
-npm update
+# Test audio streaming
+curl -F "audio=@test.wav" https://your-domain.com/api/test-recognition
 
-# Check for vulnerabilities
-npm audit
-
-# Fix vulnerabilities
-npm audit fix
-```
-
-### 3. Checking Logs in Railway
-```bash
-# Install Railway CLI
-npm i -g @railway/cli
-
-# View logs
-railway logs
-
-# View specific service logs
-railway logs -s your-service-name
+# Monitor recognition quality
+tail -f ~/.pm2/logs/phoney-err.log
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Twilio Call Issues**
-   - Verify webhook URL is correct and accessible
-   - Check Twilio phone number configuration
-   - Ensure your TwiML responses are valid
-   - Verify proper call flow with Twilio logs
+1. **WebSocket Connection Issues**
+   - Check SSL certificate validity
+   - Verify proxy configuration
+   - Monitor connection timeouts
+   - Check client-side errors
 
-2. **Speech Recognition Problems**
-   - Check gather verb settings in TwiML
-   - Verify timeouts are appropriate
-   - Review the full form data coming from Twilio
-   - Test with different speech hints
+2. **Audio Streaming Problems**
+   - Verify audio format settings
+   - Check stream continuity
+   - Monitor packet loss
+   - Verify audio quality
 
-3. **Pusher Connection Issues**
-   - Verify Pusher credentials are correct
-   - Check WebSocket connectivity
-   - Ensure channel names match between client and server
-   - Verify authentication endpoint is working
+3. **Speech Recognition Issues**
+   - Check API quotas
+   - Verify audio format
+   - Monitor recognition accuracy
+   - Review error patterns
 
-4. **AI Response Problems**
-   - Check Google API key and permissions
-   - Review AI prompt for any issues
-   - Ensure streaming implementation is correct
-   - Validate TTS voice settings
-
-2. **Memory Issues**
-   - Monitor memory usage
-   - Configure garbage collection
-   - Optimize resource usage
-
-3. **Database Performance**
-   - Check query performance
-   - Optimize indexes
-   - Monitor connections
-
-## Rollback Procedure
+### Logging and Debugging
 
 ```bash
-# 1. Switch to previous version
-git checkout v1.0.0
+# View WebSocket logs
+pm2 logs audio-stream
 
-# 2. Rebuild application
-npm run build
+# Monitor real-time metrics
+pm2 monit
 
-# 3. Restart services
-pm2 restart all
+# Check system resources
+htop
 
-# 4. Verify deployment
-curl https://your-domain.com/health
+# View application errors
+tail -f ~/.pm2/logs/phoney-err.log
 ```
+
+## Health Checks
+
+Regular health checks should monitor:
+- WebSocket connection status
+- Speech recognition accuracy
+- AI response latency
+- Audio stream quality
+- System resource usage
+
+## Scaling Considerations
+
+- Implement horizontal scaling for WebSocket connections
+- Use load balancing for audio processing
+- Scale speech recognition workers as needed
+- Monitor and adjust resource allocation
+- Implement proper connection pooling
