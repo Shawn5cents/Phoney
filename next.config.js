@@ -4,7 +4,6 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
-  transpilePackages: ['ws', '@google-cloud/speech'],
   experimental: {
     serverComponentsExternalPackages: ['ws', '@google-cloud/speech'],
   },
@@ -16,10 +15,6 @@ const nextConfig = {
       });
     }
     return config;
-  },
-  // Required for WebSocket support
-  webSocketServer: {
-    type: 'ws',
   }
 }
 
