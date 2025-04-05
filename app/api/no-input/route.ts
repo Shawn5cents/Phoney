@@ -1,82 +1,100 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
-import { generateSpeech, getVoiceOptions } from '@/lib/google-advanced-tts';
+import { generateSpeech, getVoiceOptions, streamToTwilio } from '@/lib/google-advanced-tts';
+import { personalityStore } from '@/lib/personality-store';
 
 const { VoiceResponse } = twilio.twiml;
 
 export async function POST(request: Request) {
+  console.log('=== NO INPUT HANDLER ===');
+
   try {
     const formData = await request.formData();
-    const callSid = formData.get('CallSid');
-    
+    const callSid = formData.get('CallSid') as string;
+
     if (!callSid) {
+      console.error('Missing CallSid');
       return new NextResponse('Missing CallSid', { status: 400 });
     }
 
+    const personality = personalityStore.getCurrentPersonality();
     const twiml = new VoiceResponse();
 
     try {
-      // Generate a follow-up prompt using TTS
-      const followUpText = "I didn't hear you. Could you please speak again?";
-      const voiceOptions = getVoiceOptions('professional');
-      const followUpAudio = await generateSpeech(followUpText, voiceOptions);
+      // Generate speech using Google TTS
+      const noInputMessage = "I haven't heard anything. What's on your mind? I'm here to chat and help out.";
+      const voiceConfig = getVoiceOptions(personality.name.toLowerCase());
+      const audioBuffer = await generateSpeech(noInputMessage, voiceConfig);
+      const audioUrl = await streamToTwilio(audioBuffer);
 
-      // Start gathering speech after follow-up
-      const gather = twiml.gather({
-        input: ['speech'],
-        action: '/api/process-speech',
-        method: 'POST',
-        timeout: 5,
-        speechTimeout: 'auto'
-      });
-
-      // Add the audio prompt using say with proper voice settings
-      gather.say({
-        language: voiceOptions.languageCode,
-        voice: voiceOptions.name
-      }, followUpText);
-
-      // If still no input after this, end the call
-      twiml.say({
-        language: voiceOptions.languageCode,
-        voice: voiceOptions.name
-      }, "I haven't heard anything. Please call back when you're ready to talk. Goodbye.");
-
-      return new NextResponse(twiml.toString(), {
-        headers: { 'Content-Type': 'text/xml; charset=utf-8' },
-      });
-    } catch (audioError) {
-      console.error('Error generating audio:', audioError);
+      // Create TwiML response
+      const response = new VoiceResponse();
       
-      // Fall back to basic TTS
-      const gather = twiml.gather({
-        input: ['speech'],
-        action: '/api/process-speech',
-        method: 'POST',
-        timeout: 5,
-        speechTimeout: 'auto'
+      // Set up continuous listening with stream
+      const connect = response.connect();
+      connect.stream({
+        url: '/api/audio-stream',
+        track: 'inbound_track'
       });
 
-      // Use basic voice settings for fallback
-      gather.say({
-        language: 'en-US',
-        voice: 'en-US-Neural2-D'
-      }, 'Hello? Is anyone there? I can help you if you need assistance.');
+      // Add the audio URL to response
+      response.play({}, audioUrl);
 
-      return new NextResponse(twiml.toString(), {
-        headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+      return new NextResponse(response.toString(), {
+        headers: { 'Content-Type': 'text/xml' }
+      });
+    } catch (ttsError) {
+      console.error('TTS Error:', ttsError);
+      
+      // Fallback to basic message
+      const fallbackMessage = "I'm having trouble understanding. Could you please try again?";
+      const fallbackConfig = {
+        languageCode: 'en-US',
+        name: 'en-US-Studio-M',
+        ssmlGender: 'MALE' as const
+      };
+      
+      const fallbackAudio = await generateSpeech(fallbackMessage, fallbackConfig);
+      const fallbackUrl = await streamToTwilio(fallbackAudio);
+      
+      const fallbackResponse = new VoiceResponse();
+      fallbackResponse.play({}, fallbackUrl);
+      
+      return new NextResponse(fallbackResponse.toString(), {
+        headers: { 'Content-Type': 'text/xml' }
       });
     }
   } catch (error) {
     console.error('Error in no-input handler:', error);
-    const twiml = new VoiceResponse();
-    twiml.say({
-      language: 'en-US',
-      voice: 'en-US-Neural2-D'
-    }, 'Sorry, something went wrong. Please try again.');
     
-    return new NextResponse(twiml.toString(), {
-      headers: { 'Content-Type': 'text/xml; charset=utf-8' },
-    });
+    try {
+      const errorMessage = "I'm sorry, but I'm having technical difficulties. Please try again.";
+      const errorConfig = {
+        languageCode: 'en-US',
+        name: 'en-US-Studio-M',
+        ssmlGender: 'MALE' as const
+      };
+      
+      const errorAudio = await generateSpeech(errorMessage, errorConfig);
+      const errorUrl = await streamToTwilio(errorAudio);
+      
+      const errorResponse = new VoiceResponse();
+      errorResponse.play({}, errorUrl);
+      
+      return new NextResponse(errorResponse.toString(), {
+        headers: { 'Content-Type': 'text/xml' }
+      });
+    } catch (ttsError) {
+      // Ultimate fallback
+      const finalResponse = new VoiceResponse();
+      finalResponse.say({
+        voice: 'en-US-Neural2-D',
+        language: 'en-US'
+      }, 'A system error occurred. Please try again.');
+      
+      return new NextResponse(finalResponse.toString(), {
+        headers: { 'Content-Type': 'text/xml' }
+      });
+    }
   }
 }

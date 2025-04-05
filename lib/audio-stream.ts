@@ -7,10 +7,16 @@ import { speechRecognitionService } from './speech-recognition';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
 
+const MAX_HISTORY_LENGTH = 10;
+const INACTIVITY_TIMEOUT = 300000; // 5 minutes
+const MAX_CONCURRENT_CALLS = 100;
+const BUFFER_SIZE = 50;
+
 class VoiceActivityDetector {
   private buffer: Float32Array[];
   private minSpeechFrames: number = 10;
   private silenceThreshold: number = 0.1;
+  private maxBufferSize: number = BUFFER_SIZE;
   
   constructor() {
     this.buffer = [];
@@ -20,7 +26,7 @@ class VoiceActivityDetector {
     const energy = this.calculateEnergy(audioData);
     this.buffer.push(audioData);
 
-    if (this.buffer.length > 50) {
+    if (this.buffer.length > this.maxBufferSize) {
       this.buffer.shift();
     }
 
@@ -58,12 +64,15 @@ export class AudioStreamHandler {
     context: ConversationContext;
     aiStream: GeminiStream | null;
     lastSpeechTime: number;
+    lastActivity: number;
+    ws: WebSocket;
   }>;
 
   constructor() {
     this.wsServer = new WebSocketServer({ noServer: true });
     this.activeStreams = new Map();
     this.setupWebSocketHandlers();
+    this.startInactivityCheck();
   }
 
   private setupWebSocketHandlers() {
@@ -76,6 +85,12 @@ export class AudioStreamHandler {
         return;
       }
 
+      // Check concurrent call limit
+      if (this.activeStreams.size >= MAX_CONCURRENT_CALLS) {
+        ws.close(1013, 'Maximum concurrent calls reached');
+        return;
+      }
+
       // Initialize stream context
       this.activeStreams.set(callSid, {
         vad: new VoiceActivityDetector(),
@@ -83,16 +98,29 @@ export class AudioStreamHandler {
           history: [],
           currentSpeech: '',
           lastResponse: '',
-          personality: 'professional', // Default personality
+          personality: 'professional',
           startTime: Date.now(),
           turnCount: 0
         },
         aiStream: null,
-        lastSpeechTime: Date.now()
+        lastSpeechTime: Date.now(),
+        lastActivity: Date.now(),
+        ws
       });
+
+      // Set up heartbeat
+      const heartbeat = setInterval(() => {
+        if (ws.readyState === ws.OPEN) {
+          ws.ping();
+        }
+      }, 30000);
 
       ws.on('message', async (data: WebSocket.RawData) => {
         try {
+          const streamData = this.activeStreams.get(callSid);
+          if (!streamData) return;
+
+          streamData.lastActivity = Date.now();
           const chunk: AudioChunk = JSON.parse(data.toString());
           await this.processAudioChunk(chunk, ws);
         } catch (error) {
@@ -102,7 +130,20 @@ export class AudioStreamHandler {
       });
 
       ws.on('close', () => {
+        clearInterval(heartbeat);
         this.cleanupStream(callSid);
+      });
+
+      ws.on('error', (error) => {
+        console.error(`WebSocket error for call ${callSid}:`, error);
+        this.cleanupStream(callSid);
+      });
+
+      ws.on('pong', () => {
+        const streamData = this.activeStreams.get(callSid);
+        if (streamData) {
+          streamData.lastActivity = Date.now();
+        }
       });
 
       console.log(`WebSocket connection established for call ${callSid}`);
@@ -124,26 +165,34 @@ export class AudioStreamHandler {
       streamData.lastSpeechTime = Date.now();
       
       // Process through speech recognition
-      const recognitionResult = await speechRecognitionService.processAudioChunk(
-        chunk.metadata.callSid,
-        chunk
-      );
+      try {
+        const recognitionResult = await speechRecognitionService.processAudioChunk(
+          chunk.metadata.callSid,
+          chunk
+        );
 
-      if (recognitionResult) {
-        await pusherServer.trigger(`call-${chunk.metadata.callSid}`, 'speech.recognized', {
-          text: recognitionResult.text,
-          isFinal: recognitionResult.isFinal,
-          confidence: recognitionResult.confidence,
+        if (recognitionResult) {
+          await this.notifyPusher(chunk.metadata.callSid, 'speech.recognized', {
+            text: recognitionResult.text,
+            isFinal: recognitionResult.isFinal,
+            confidence: recognitionResult.confidence,
+            timestamp: Date.now()
+          });
+
+          if (recognitionResult.isFinal) {
+            await this.handleFinalTranscription(
+              chunk.metadata.callSid,
+              recognitionResult.text,
+              ws
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Speech recognition error:', error);
+        await this.notifyPusher(chunk.metadata.callSid, 'speech.error', {
+          error: 'Speech recognition failed',
           timestamp: Date.now()
         });
-
-        if (recognitionResult.isFinal) {
-          await this.handleFinalTranscription(
-            chunk.metadata.callSid,
-            recognitionResult.text,
-            ws
-          );
-        }
       }
     } else {
       // Check for end of speech after silence threshold
@@ -159,32 +208,41 @@ export class AudioStreamHandler {
     }
   }
 
+  private async notifyPusher(callSid: string, event: string, data: any) {
+    try {
+      await pusherServer.trigger(`call-${callSid}`, event, data);
+    } catch (error) {
+      console.error(`Pusher notification failed for ${event}:`, error);
+    }
+  }
+
   private async handleFinalTranscription(callSid: string, text: string, ws: WebSocket) {
     const streamData = this.activeStreams.get(callSid);
     if (!streamData) return;
 
     const { context } = streamData;
     
-    // Update conversation history
+    // Update conversation history with length limit
     context.history.push(`User: ${text}`);
-    if (context.history.length > 10) context.history.shift();
+    if (context.history.length > MAX_HISTORY_LENGTH) {
+      context.history.shift();
+    }
 
     // Get personality configuration
     const personality = personalityStore.getPersonality(context.personality);
 
-    // Initialize AI stream if needed
-    if (!streamData.aiStream) {
-      streamData.aiStream = await GeminiStream.create({
-        personality,
-        context: context.history
-      });
-    }
-
-    // Generate and stream AI response
     try {
+      // Initialize AI stream if needed
+      if (!streamData.aiStream) {
+        streamData.aiStream = await GeminiStream.create({
+          personality,
+          context: context.history
+        });
+      }
+
+      // Generate and stream AI response
       await streamData.aiStream.streamResponse(text, async (chunk) => {
-        // Send partial response to client
-        await pusherServer.trigger(`call-${callSid}`, 'ai.response.partial', {
+        await this.notifyPusher(callSid, 'ai.response.partial', {
           text: chunk,
           timestamp: Date.now(),
           turnCount: context.turnCount
@@ -193,28 +251,50 @@ export class AudioStreamHandler {
 
       context.turnCount++;
       
-      // Final response notification
-      await pusherServer.trigger(`call-${callSid}`, 'ai.response.complete', {
+      await this.notifyPusher(callSid, 'ai.response.complete', {
         timestamp: Date.now(),
         turnCount: context.turnCount
       });
     } catch (error) {
       console.error('Error generating AI response:', error);
-      await pusherServer.trigger(`call-${callSid}`, 'ai.response.error', {
+      await this.notifyPusher(callSid, 'ai.response.error', {
         error: 'Failed to generate response',
         timestamp: Date.now()
       });
+
+      // Attempt to recreate AI stream on error
+      if (streamData.aiStream) {
+        streamData.aiStream.close();
+        streamData.aiStream = null;
+      }
     }
   }
 
   private cleanupStream(callSid: string) {
     const streamData = this.activeStreams.get(callSid);
-    if (streamData?.aiStream) {
-      streamData.aiStream.close();
+    if (streamData) {
+      if (streamData.aiStream) {
+        streamData.aiStream.close();
+      }
+      if (streamData.ws.readyState === WebSocket.OPEN) {
+        streamData.ws.close();
+      }
+      speechRecognitionService.closeStream(callSid);
+      this.activeStreams.delete(callSid);
+      console.log(`Cleaned up stream for call ${callSid}`);
     }
-    speechRecognitionService.closeStream(callSid);
-    this.activeStreams.delete(callSid);
-    console.log(`Cleaned up stream for call ${callSid}`);
+  }
+
+  private startInactivityCheck() {
+    setInterval(() => {
+      const now = Date.now();
+      for (const [callSid, streamData] of this.activeStreams) {
+        if (now - streamData.lastActivity > INACTIVITY_TIMEOUT) {
+          console.log(`Closing inactive stream for call ${callSid}`);
+          this.cleanupStream(callSid);
+        }
+      }
+    }, 60000); // Check every minute
   }
 
   public handleUpgrade(request: IncomingMessage, socket: Socket, head: Buffer) {
