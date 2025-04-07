@@ -1,5 +1,5 @@
 import { COMMON_PHRASES } from './speech-cache';
-import { generateSpeech } from './google-advanced-tts';
+import { generateSpeech, VoiceConfig } from './google-advanced-tts';
 import { personalities } from './ai-personalities';
 
 /**
@@ -28,10 +28,12 @@ export async function preCacheCommonPhrases(): Promise<void> {
         
         // Cache male voice version
         try {
-          await generateSpeech(phrase, {
-            personalityType,
-            gender: 'MALE'
-          });
+          const voiceConfig: VoiceConfig = {
+            languageCode: 'en-US',
+            name: 'en-US-Studio-M',
+            ssmlGender: 'MALE'
+          };
+          await generateSpeech(phrase, voiceConfig);
           completed++;
           console.log(`Pre-cached [${completed}/${total}]: "${phrase}" (${personalityType}, MALE)`);
         } catch (error) {
@@ -40,10 +42,12 @@ export async function preCacheCommonPhrases(): Promise<void> {
         
         // Cache female voice version
         try {
-          await generateSpeech(phrase, {
-            personalityType,
-            gender: 'FEMALE'
-          });
+          const voiceConfig: VoiceConfig = {
+            languageCode: 'en-US',
+            name: 'en-US-Studio-O',
+            ssmlGender: 'FEMALE'
+          };
+          await generateSpeech(phrase, voiceConfig);
           completed++;
           console.log(`Pre-cached [${completed}/${total}]: "${phrase}" (${personalityType}, FEMALE)`);
         } catch (error) {

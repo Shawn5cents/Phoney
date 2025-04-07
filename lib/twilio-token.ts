@@ -1,5 +1,5 @@
-import AccessToken from 'twilio/lib/jwt/AccessToken';
-import VoiceGrant from 'twilio/lib/jwt/AccessToken/VoiceGrant';
+const AccessToken = require('twilio/lib/jwt/AccessToken');
+const VoiceGrant = require('twilio/lib/jwt/AccessToken/VoiceGrant');
 
 export interface TokenOptions {
   identity: string;
@@ -19,12 +19,12 @@ export async function generateToken(options: TokenOptions): Promise<string> {
   // Create a Voice grant
   const voiceGrant = new VoiceGrant({
     incomingAllow: true,
-    outgoingApplicationSid: process.env.TWILIO_APP_SID
+    outgoingApplicationSid: process.env.TWILIO_TWIML_APP_SID
   });
 
   // Add the grant to the token
   token.addGrant(voiceGrant);
 
-  // Generate JWT
+  // Serialize the token
   return token.toJwt();
 }

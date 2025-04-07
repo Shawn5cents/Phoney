@@ -199,7 +199,7 @@ export class AudioStreamHandler {
   }
 
   private cleanupStream(callSid: string) {
-    const streamData = this.activeStreams.get(callSid);
+    const streamData = this.streamManager.getStream(callSid);
     if (streamData) {
       if (streamData.aiStream) {
         streamData.aiStream.close();
@@ -208,7 +208,7 @@ export class AudioStreamHandler {
         streamData.ws.close();
       }
       speechRecognitionService.closeStream(callSid);
-      this.activeStreams.delete(callSid);
+      this.streamManager.cleanupStream(callSid);
       console.log(`Cleaned up stream for call ${callSid}`);
     }
   }

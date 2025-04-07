@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
-import twilio from 'twilio';
+const twilio = require('twilio');
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+if (!accountSid || !authToken) {
+  throw new Error('Missing Twilio credentials');
+}
+
+const client = twilio(accountSid, authToken);
 
 export async function POST(request: Request) {
   const { callSid } = await request.json();
 
   try {
     // Redirect the call to the browser
-    const twiml = new twilio.twiml.VoiceResponse();
+    const VoiceResponse = require('twilio').twiml.VoiceResponse;
+    const twiml = new VoiceResponse();
     twiml.say({ voice: 'man', language: 'en-US' }, 'Transferring you to a human operator.');
     twiml.redirect('/api/browser-call');
 

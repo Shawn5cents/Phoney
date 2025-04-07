@@ -72,7 +72,8 @@ export async function POST(request: Request) {
     });
 
     // Generate speech from response using voice configuration
-    const audioBuffer = await generateSpeech(response, currentPersonality.voiceConfig);
+    const googleVoiceConfig = getVoiceConfigFromPersonality(currentPersonality);
+    const audioBuffer = await generateSpeech(response, googleVoiceConfig);
     
     if (!audioBuffer) {
       throw new Error('Failed to generate speech audio');
@@ -82,10 +83,10 @@ export async function POST(request: Request) {
     const twiml = new VoiceResponse();
 
     // Get Twilio voice configuration
-    const voiceConfig = getTwilioVoiceConfig(currentPersonality.voiceConfig);
+    const twilioVoiceConfig = getTwilioVoiceConfig(currentPersonality.voiceConfig);
     const sayAttrs: SayAttributes = {
-      voice: voiceConfig.voice as any, // Cast to any to avoid TypeScript error
-      language: voiceConfig.language
+      voice: twilioVoiceConfig.voice as 'woman' | 'man',
+      language: twilioVoiceConfig.language
     };
 
     // Set up gathering of next speech input

@@ -1,5 +1,5 @@
 import { SayVoice } from 'twilio/lib/twiml/VoiceResponse';
-import { VoiceConfig } from './voice-processing';
+import { VoiceConfig } from '../types/voice';
 
 /**
  * AI model safety settings for content filtering
@@ -64,10 +64,10 @@ class PersonalityStore {
       - React to what the person says rather than following a script
       - Use humor when appropriate
       Remember you're having a real conversation, not following a rigid structure.`,
-      voiceId: 'en-US-Studio-M',
+      voiceId: 'echo',
       voiceConfig: {
         languageCode: 'en-US',
-        name: 'en-US-Studio-M',
+        name: 'echo',
         ssmlGender: 'MALE'
       },
       traits: ["Natural", "Conversational", "Engaging"],
@@ -94,10 +94,10 @@ class PersonalityStore {
       - Share relevant insights or gentle humor when appropriate
       - Be empathetic and understanding
       Remember this is a natural phone conversation, not a rigid support call.`,
-      voiceId: 'en-US-Studio-O',
+      voiceId: 'nova',
       voiceConfig: {
         languageCode: 'en-US',
-        name: 'en-US-Studio-O',
+        name: 'nova',
         ssmlGender: 'FEMALE'
       },
       traits: ["Warm", "Engaging", "Natural"],
