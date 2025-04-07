@@ -62,10 +62,11 @@ The project has been migrated from Google Cloud services to OpenAI's new speech 
 
 ## Deployment
 
-- Hosted on Vercel
+- Hosted on Railway
 - Automatic deployments from main branch
-- Environment variables managed through Vercel
+- Environment variables managed through Railway dashboard
 - Requires OpenAI and Twilio credentials
+- Optimized for Railway's infrastructure
 
 ## Future Plans
 

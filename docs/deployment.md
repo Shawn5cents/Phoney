@@ -33,11 +33,8 @@ TWILIO_API_KEY_SID=your_api_key_sid
 TWILIO_API_KEY_SECRET=your_api_key_secret
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
-# Google Cloud Configuration
-GOOGLE_API_KEY=your_google_api_key
-GOOGLE_PROJECT_ID=your_project_id
-GOOGLE_CLIENT_EMAIL=your_service_account_email
-GOOGLE_PRIVATE_KEY=your_service_account_private_key
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
 
 # Pusher Configuration (for real-time updates)
 PUSHER_APP_ID=your_pusher_app_id
@@ -66,18 +63,13 @@ NEXT_PUBLIC_WS_URL=wss://your-domain.com
   - Audio Track: `inbound_track`
   - Audio Format: MULAW, 8000Hz
 
-### 2. Google Cloud Setup
-- Create a Google Cloud project
-- Enable required APIs:
-  - Gemini API
-  - Cloud Speech-to-Text API
-  - Cloud Text-to-Speech API
-- Create a service account with necessary permissions
-- Download service account key
-- Configure Speech-to-Text settings:
-  - Enable streaming recognition
-  - Set up phone call model
-  - Configure enhanced models
+### 2. OpenAI Setup
+- Create an OpenAI account
+- Generate an API key
+- Ensure access to required models:
+  - gpt-4o-transcribe for speech-to-text
+  - gpt-4o-mini-tts for text-to-speech
+- Store your API key securely in Railway environment variables
 
 ### 3. Pusher Configuration
 - Create a Pusher Channels account and app
