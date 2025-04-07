@@ -5,10 +5,9 @@
 Before you begin, ensure you have:
 - Node.js 18+ installed
 - A Twilio account with a purchased phone number
-- A Google Cloud account with:
-  - Gemini API access
-  - Cloud Speech-to-Text API access
-  - Text-to-Speech API access
+- An OpenAI account with API access for:
+  - Speech-to-text (gpt-4o-transcribe)
+  - Text-to-speech (gpt-4o-mini-tts)
 - A Pusher Channels account
 
 ## ⚡ Quick Start
@@ -32,11 +31,8 @@ Before you begin, ensure you have:
    TWILIO_API_KEY_SECRET=your_api_key_secret
    TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
-   # Google Cloud Configuration
-   GOOGLE_API_KEY=your_google_api_key
-   GOOGLE_PROJECT_ID=your_project_id
-   GOOGLE_CLIENT_EMAIL=your_service_account_email
-   GOOGLE_PRIVATE_KEY=your_service_account_private_key
+   # OpenAI Configuration
+   OPENAI_API_KEY=your_openai_api_key  # Required for speech services
 
    # Pusher Configuration
    PUSHER_APP_ID=your_pusher_app_id
@@ -66,16 +62,13 @@ Before you begin, ensure you have:
    - Set WebSocket URL to `[Your Domain]/api/audio-stream`
    - Configure audio format to MULAW
 
-### Google Cloud Setup
-1. Create a project in the [Google Cloud Console](https://console.cloud.google.com)
-2. Enable required APIs:
-   - Gemini API
-   - Cloud Speech-to-Text API
-   - Cloud Text-to-Speech API
-3. Create a service account with access to these APIs
-4. Download the service account key file
-5. Enable real-time streaming features for Speech-to-Text
-6. Configure speech recognition model for phone calls
+### OpenAI Setup
+1. Create an account at [OpenAI](https://platform.openai.com)
+2. Generate an API key in your account settings
+3. Ensure you have access to:
+   - Speech-to-text API (gpt-4o-transcribe)
+   - Text-to-speech API (gpt-4o-mini-tts)
+4. Store your API key securely in your environment variables
 
 ### Pusher Setup
 1. Create a Pusher Channels account at [pusher.com](https://pusher.com)

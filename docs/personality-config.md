@@ -2,14 +2,14 @@
 
 ## Overview
 
-Phoney's AI personality system allows you to customize how your AI assistant interacts with callers. Each personality is defined by a set of characteristics that influence the Google Gemini AI's responses, tone, and Google TTS voice settings.
+Phoney's AI personality system allows you to customize how your AI assistant interacts with callers. Each personality is defined by a set of characteristics that influence the AI's responses, tone, and OpenAI voice settings.
 
 ## Built-in Personalities
 
 ### 👔 Professional Assistant
 - **Use Case**: Corporate environments, business services
 - **Traits**: Professional, efficient, business-focused
-- **Voice**: Clear, authoritative (Google TTS: en-US-Studio-M)
+- **Voice**: Clear, authoritative (OpenAI: onyx)
 - **Example Interactions**:
   - Scheduling meetings
   - Handling customer inquiries
@@ -18,7 +18,7 @@ Phoney's AI personality system allows you to customize how your AI assistant int
 ### 😊 Friendly Helper
 - **Use Case**: Customer service, retail, hospitality
 - **Traits**: Warm, approachable, empathetic
-- **Voice**: Friendly, welcoming (Google TTS: en-US-Studio-O)
+- **Voice**: Friendly, welcoming (OpenAI: nova)
 - **Example Interactions**:
   - Welcoming customers
   - Providing product information
@@ -27,7 +27,7 @@ Phoney's AI personality system allows you to customize how your AI assistant int
 ### 😄 Witty Companion
 - **Use Case**: Entertainment, casual brands, social media
 - **Traits**: Clever, humorous, engaging
-- **Voice**: Dynamic, energetic (Google TTS: en-US-Neural2-D)
+- **Voice**: Dynamic, energetic (OpenAI: fable)
 - **Example Interactions**:
   - Event information
   - Creative services
@@ -36,7 +36,7 @@ Phoney's AI personality system allows you to customize how your AI assistant int
 ### 🧘 Zen Guide
 - **Use Case**: Wellness, healthcare, meditation
 - **Traits**: Calm, mindful, patient
-- **Voice**: Soothing, measured (Google TTS: en-US-Neural2-C)
+- **Voice**: Soothing, measured (OpenAI: alloy)
 - **Example Interactions**:
   - Wellness consultations
   - Appointment scheduling
@@ -52,9 +52,9 @@ interface AIPersonality {
   name: string;         // Display name
   description: string;  // Brief description
   systemPrompt: string; // Google Gemini system prompt
-  voiceSettings: {      // Google TTS voice settings
+  voiceSettings: {      // OpenAI voice settings
     languageCode: string; // e.g., "en-US"
-    name: string;        // e.g., "en-US-Studio-O"
+    name: string;        // e.g., "nova" or "onyx"
     ssmlGender: "NEUTRAL" | "MALE" | "FEMALE";
   };
   examples: {          // Example conversations for context

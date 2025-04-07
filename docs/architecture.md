@@ -6,9 +6,10 @@
 graph TD
     A[Incoming Call] -->|Twilio| B[Next.js API]
     B -->|Real-time| C[Pusher]
-    B -->|AI Processing| D[Google Gemini]
-    D -->|Streaming Response| B
-    B -->|Voice Synthesis| E[Google TTS]
+    B -->|Speech-to-Text| D[OpenAI Transcribe]
+    B -->|Text-to-Speech| E[OpenAI TTS]
+    D -->|Transcription| B
+    E -->|Voice Synthesis| B
     C -->|Real-time Updates| F[Dashboard]
     F -->|Call Control| G[User]
     G -->|Transfer/End Call| B
@@ -73,8 +74,7 @@ graph TD
 
 ### Backend
 - Next.js API Routes
-- Google Gemini AI
-- Google Text-to-Speech
+- OpenAI API (speech-to-text and text-to-speech)
 - Twilio SDK with TwiML
 - Pusher Server for real-time updates
 
